@@ -54,10 +54,10 @@ class HTTPRequestParser:
         self.headers = []
         self.body_event = asyncio.Event()
         self.scope_event = asyncio.Event()
-        self.is_completed = False
+        self.more_body = True
 
     def disconnect(self) -> None:
-        self.is_completed = True
+        self.more_body = False
 
     def on_url(self, url: bytes) -> None:
         self.url = URL(url)
@@ -106,16 +106,19 @@ class HTTPRequestParser:
         self.body_event.set()
 
     async def receive_body(self) -> tuple[bytes | None, bool]:
-        if self.is_completed is True and self.body is None:
-            return (self.body, False)
         if self.body is None:
+            self.body = b""
+            return (self.body, False)
+        if self.more_body is True or self.body == b"":
             self.transport.resume_reading()
             await self.body_event.wait()
             self.body_event.clear()
-        return (self.body, not self.is_completed)
+        body = self.body
+        self.body = b""
+        return (body, self.more_body)
 
     def feed_data(self, data: bytes) -> None:
         self.parser.feed_data(data)
 
     def on_message_complete(self) -> None:
-        self.is_completed = True
+        self.more_body = False

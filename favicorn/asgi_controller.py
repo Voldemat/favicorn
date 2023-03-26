@@ -4,6 +4,8 @@ from asgiref.typing import (
     ASGISendEvent,
     HTTPDisconnectEvent,
     HTTPRequestEvent,
+    HTTPResponseBodyEvent,
+    HTTPResponseStartEvent,
 )
 
 from .request_parser import HTTPRequestParser
@@ -28,7 +30,11 @@ class ASGIController:
 
     async def start(self) -> None:
         scope = await self.request_parser.get_scope()
-        await self.app(scope, self.receive, self.send)
+        try:
+            await self.app(scope, self.receive, self.send)
+        except BaseException as unhandled_error:
+            print(unhandled_error)
+            await self.send_500_response()
 
     async def receive(self) -> ASGIReceiveEvent:
         body, more_body = await self.request_parser.receive_body()
@@ -42,3 +48,20 @@ class ASGIController:
 
     async def send(self, event: ASGISendEvent) -> None:
         self.response_parser.send(event)
+
+    async def send_500_response(self) -> None:
+        await self.send(
+            HTTPResponseStartEvent(
+                type="http.response.start",
+                status=500,
+                headers=[],
+                trailers=False,
+            )
+        )
+        await self.send(
+            HTTPResponseBodyEvent(
+                type="http.response.body",
+                body=b"Internal Server Error",
+                more_body=False,
+            )
+        )
