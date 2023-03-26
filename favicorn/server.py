@@ -3,6 +3,8 @@ from typing import Type
 
 from asgiref.typing import ASGI3Application
 
+from .global_state import GlobalState
+from .iglobal_state import IGlobalState
 from .iprotocol import IProtocol
 from .isocket_provider import ISocketProvider
 
@@ -12,15 +14,20 @@ class Server:
     protocol_class: Type[IProtocol]
     server: asyncio.Server | None
     app: ASGI3Application
+    global_state: IGlobalState
 
     def __init__(
         self,
         app: ASGI3Application,
         socket_provider: ISocketProvider,
         protocol_class: Type[IProtocol],
+        global_state: IGlobalState | None = None,
     ) -> None:
+        if global_state is None:
+            global_state = GlobalState()
         self.socket_provider = socket_provider
         self.protocol_class = protocol_class
+        self.global_state = global_state
         self.server = None
         self.app = app
 
@@ -28,7 +35,7 @@ class Server:
         loop = asyncio.get_running_loop()
         sock = self.socket_provider.acquire()
         self.server = await loop.create_server(
-            lambda: self.protocol_class(self.app),
+            lambda: self.protocol_class(self.global_state, self.app),
             sock=sock,
             start_serving=False,
         )

@@ -3,14 +3,18 @@ import asyncio
 from asgiref.typing import ASGI3Application
 
 from .asgi_controller import ASGIController
+from .iglobal_state import IGlobalState
 from .iprotocol import IProtocol
 from .request_parser import HTTPRequestParser
 from .response_serializer import HTTPResponseSerializer
 
 
 class HTTPProtocol(IProtocol):
-    def __init__(self, app: ASGI3Application) -> None:
+    def __init__(
+        self, global_state: IGlobalState, app: ASGI3Application
+    ) -> None:
         self.app = app
+        self.global_state = global_state
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         if not isinstance(transport, asyncio.Transport):
@@ -21,7 +25,9 @@ class HTTPProtocol(IProtocol):
             request_parser=self.request_parser,
             response_serializer=HTTPResponseSerializer(transport),
         )
-        asyncio.create_task(self.asgi_controller.start())
+        self.global_state.add_task(
+            asyncio.create_task(self.asgi_controller.start())
+        )
 
     def connection_lost(self, exc: Exception | None) -> None:
         self.request_parser.disconnect()
