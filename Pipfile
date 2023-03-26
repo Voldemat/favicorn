@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 httptools = "*"
+asgiref = "*"
 
 [dev-packages]
 black = "*"
