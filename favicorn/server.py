@@ -4,6 +4,7 @@ from typing import Type
 from asgiref.typing import ASGI3Application
 
 from .global_state import GlobalState
+from .http_protocol import HTTPProtocol
 from .iglobal_state import IGlobalState
 from .iprotocol import IProtocol
 from .isocket_provider import ISocketProvider
@@ -20,7 +21,7 @@ class Server:
         self,
         app: ASGI3Application,
         socket_provider: ISocketProvider,
-        protocol_class: Type[IProtocol],
+        protocol_class: Type[IProtocol] = HTTPProtocol,
         global_state: IGlobalState | None = None,
     ) -> None:
         if global_state is None:
