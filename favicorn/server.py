@@ -25,7 +25,7 @@ class Server:
         self.app = app
 
     async def init(self) -> None:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         sock = self.socket_provider.acquire()
         self.server = await loop.create_server(
             lambda: self.protocol_class(self.app),

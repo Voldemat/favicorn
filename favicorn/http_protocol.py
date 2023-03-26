@@ -5,7 +5,7 @@ from asgiref.typing import ASGI3Application
 from .asgi_controller import ASGIController
 from .iprotocol import IProtocol
 from .request_parser import HTTPRequestParser
-from .response_parser import HTTPResponseParser
+from .response_serializer import HTTPResponseSerializer
 
 
 class HTTPProtocol(IProtocol):
@@ -19,7 +19,7 @@ class HTTPProtocol(IProtocol):
         self.asgi_controller = ASGIController(
             app=self.app,
             request_parser=self.request_parser,
-            response_parser=HTTPResponseParser(transport),
+            response_serializer=HTTPResponseSerializer(transport),
         )
         asyncio.create_task(self.asgi_controller.start())
 

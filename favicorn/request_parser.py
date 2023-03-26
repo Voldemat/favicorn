@@ -1,43 +1,32 @@
 import asyncio
-
-from asgiref.typing import (
-    ASGIVersions,
-    HTTPScope,
-)
+from dataclasses import dataclass
+from typing import Iterable, Literal
 
 import httptools
 
 from .utils import get_remote_addr, is_ssl
 
 
-class URL:
-    schema: bytes
-    host: bytes
-    port: int
-    path: bytes
-    query: bytes
-    fragment: bytes
-    userinfo: bytes
-    raw_url: bytes
-
-    def __init__(self, raw_url: bytes) -> None:
-        obj = httptools.parse_url(raw_url)
-        self.raw_url = raw_url
-        self.schema = obj.schema
-        self.host = obj.host
-        self.port = obj.port
-        self.path = obj.path
-        self.query = obj.query
-        self.fragment = obj.fragment
-        self.userinfo = obj.userinfo
+@dataclass
+class HTTPRequest:
+    path: str
+    method: str
+    root_path: str
+    raw_path: bytes
+    http_version: str
+    query_string: bytes
+    client: tuple[str, int] | None
+    server: tuple[str, int] | None
+    headers: Iterable[tuple[bytes, bytes]]
+    scheme: Literal["https"] | Literal["http"]
 
 
 class HTTPRequestParser:
-    scope: HTTPScope | None
-    url: URL | None
+    request: HTTPRequest | None
+    url: bytes | None
     body: bytes | None
     body_event: asyncio.Event
-    scope_event: asyncio.Event
+    request_event: asyncio.Event
     headers: list[tuple[bytes, bytes]]
     is_completed: bool
     transport: asyncio.Transport
@@ -48,19 +37,19 @@ class HTTPRequestParser:
     ) -> None:
         self.parser = httptools.HttpRequestParser(self)
         self.transport = transport
-        self.scope = None
+        self.request = None
         self.url = None
         self.body = None
         self.headers = []
         self.body_event = asyncio.Event()
-        self.scope_event = asyncio.Event()
+        self.request_event = asyncio.Event()
         self.more_body = True
 
     def disconnect(self) -> None:
         self.more_body = False
 
     def on_url(self, url: bytes) -> None:
-        self.url = URL(url)
+        self.url = url
 
     def on_header(self, name: bytes, value: bytes) -> None:
         self.headers.append((name.decode().lower().encode(), value))
@@ -73,31 +62,30 @@ class HTTPRequestParser:
                 b" not support websockets connections</h1>"
             )
             self.transport.write_eof()
+            return
         assert self.url is not None
-        self.scope = HTTPScope(
-            type="http",
-            asgi=ASGIVersions(spec_version="3.0", version="3.0"),
+        url_object = httptools.parse_url(self.url)
+        self.request = HTTPRequest(
             http_version=self.parser.get_http_version().upper(),
             scheme="http" if not is_ssl(self.transport) else "https",
-            path=self.url.path.decode(),
-            raw_path=self.url.raw_url,
-            query_string=self.url.query,
+            path=url_object.path.decode(),
+            raw_path=self.url,
+            query_string=url_object.query,
             root_path="",
             headers=self.headers,
             server=("localhost", 8000),
             client=get_remote_addr(self.transport),
-            extensions={},
             method=self.parser.get_method().decode(),
         )
-        self.scope_event.set()
+        self.request_event.set()
         self.transport.pause_reading()
 
-    async def get_scope(self) -> HTTPScope:
-        if self.scope is None:
-            await self.scope_event.wait()
-            self.scope_event.clear()
-            assert self.scope is not None
-        return self.scope
+    async def get_request(self) -> HTTPRequest:
+        if self.request is None:
+            await self.request_event.wait()
+            self.request_event.clear()
+            assert self.request is not None
+        return self.request
 
     def on_body(self, body: bytes) -> None:
         if self.body is None:

@@ -6,7 +6,7 @@ asyncio_mode="auto"
 log_cli_level = "DEBUG"
 
 [tool.mypy]
-strict = true
+strict=true
 
 [[tool.mypy.overrides]]
 module='httptools.*'

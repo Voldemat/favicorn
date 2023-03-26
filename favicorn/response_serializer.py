@@ -10,18 +10,18 @@ from asgiref.typing import (
 )
 
 
-class ResponseEvents(enum.Enum):
+class HTTPResponseEvents(enum.Enum):
     START = "http.response.start"
     TRAILERS = "http.response.trailers"
     BODY = "http.response.body"
 
 
-class HTTPResponseParser:
-    expected_event: ResponseEvents | None
+class HTTPResponseSerializer:
+    expected_event: HTTPResponseEvents | None
     transport: asyncio.WriteTransport
 
     def __init__(self, transport: asyncio.WriteTransport) -> None:
-        self.expected_event = ResponseEvents.START
+        self.expected_event = HTTPResponseEvents.START
         self.transport = transport
 
     def is_completed(self) -> bool:
@@ -30,26 +30,26 @@ class HTTPResponseParser:
     def send(self, event: ASGISendEvent) -> None:
         self.validate_event(event)
         match event["type"]:
-            case ResponseEvents.START.value:
+            case HTTPResponseEvents.START.value:
                 event = cast(HTTPResponseStartEvent, event)
                 headers = self.encode_headers(event["headers"])
                 message: bytes = (
                     f'HTTP/1.1 {event["status"]}\n'.encode() + headers
                 )
                 if event.get("trailers", False) is True:
-                    self.expected_event = ResponseEvents.TRAILERS
+                    self.expected_event = HTTPResponseEvents.TRAILERS
                 else:
-                    self.expected_event = ResponseEvents.BODY
+                    self.expected_event = HTTPResponseEvents.BODY
                     message += b"\n"
                 self.transport.write(message)
-            case ResponseEvents.TRAILERS.value:
+            case HTTPResponseEvents.TRAILERS.value:
                 event = cast(HTTPResponseTrailersEvent, event)
                 message = self.encode_headers(event["headers"])
                 if event.get("more_trailers", False) is False:
                     message += b"\n"
-                    self.expected_event = ResponseEvents.BODY
+                    self.expected_event = HTTPResponseEvents.BODY
                 self.transport.write(message)
-            case ResponseEvents.BODY.value:
+            case HTTPResponseEvents.BODY.value:
                 event = cast(HTTPResponseBodyEvent, event)
                 message = event["body"]
                 self.transport.write(message)
