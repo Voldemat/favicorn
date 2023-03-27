@@ -45,7 +45,7 @@ class ASGIController:
         request = await self.request_parser.get_request()
         scope = HTTPScope(
             type="http",
-            asgi=ASGIVersions(spec_version="3.0", version="3.0"),
+            asgi=ASGIVersions(spec_version="2.3", version="3.0"),
             http_version=request.http_version,
             scheme=request.scheme,
             path=request.path,
@@ -75,20 +75,16 @@ class ASGIController:
         )
 
     async def send_500_response(self) -> None:
-        await self.send(
-            HTTPResponseStartEvent(
-                type="http.response.start",
-                status=500,
-                headers=[],
-                trailers=False,
-            )
+        content = b"Internal Server Error"
+        headers = (
+            (b"Content-Type", b"text/plain; charset=utf-8"),
+            (b"Content-Length", str(len(content)).encode()),
         )
-        await self.send(
-            HTTPResponseBodyEvent(
-                type="http.response.body",
-                body=b"Internal Server Error",
-                more_body=False,
-            )
+        self.response_serializer.send_at_once(
+            http_version="1.1",
+            status=500,
+            headers=headers,
+            body=content,
         )
 
     async def send(self, event: ASGISendEvent) -> None:

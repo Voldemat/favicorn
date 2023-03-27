@@ -1,7 +1,14 @@
 import os
 import socket
+from typing import Literal
 
-from .isocket_provider import INET_FAMILY, ISocketProvider
+from .isocket_provider import ISocketProvider
+
+
+INET_FAMILY = (
+    Literal[socket.AddressFamily.AF_INET]
+    | Literal[socket.AddressFamily.AF_INET6]
+)
 
 
 class InetSocketProvider(ISocketProvider):
@@ -14,7 +21,7 @@ class InetSocketProvider(ISocketProvider):
         self,
         host: str,
         port: int,
-        family: INET_FAMILY = socket.AddressFamily.AF_UNSPEC,
+        family: INET_FAMILY = socket.AddressFamily.AF_INET,
     ) -> None:
         self.host = host
         self.port = port

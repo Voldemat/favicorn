@@ -55,7 +55,8 @@ class HTTPRequestParser:
         self.headers.append((name.decode().lower().encode(), value))
 
     def on_headers_complete(self) -> None:
-        if self.parser.should_upgrade():
+        http_version = self.parser.get_http_version().upper()
+        if self.parser.should_upgrade() and http_version == "1.1":
             self.transport.pause_reading()
             self.transport.write(
                 b"HTTP/1.1 501\n\n<h1>Server does"
@@ -66,7 +67,7 @@ class HTTPRequestParser:
         assert self.url is not None
         url_object = httptools.parse_url(self.url)
         self.request = HTTPRequest(
-            http_version=self.parser.get_http_version().upper(),
+            http_version=http_version,
             scheme="http" if not is_ssl(self.transport) else "https",
             path=url_object.path.decode(),
             raw_path=self.url,

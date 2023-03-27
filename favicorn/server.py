@@ -51,3 +51,8 @@ class Server:
         if self.server is None:
             raise ValueError("Server is not initialized yet")
         await self.server.start_serving()
+
+    async def serve_forever(self) -> None:
+        if self.server is None:
+            raise ValueError("Server is not initialized yet")
+        await self.server.serve_forever()

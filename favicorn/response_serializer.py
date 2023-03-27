@@ -15,13 +15,32 @@ class HTTPResponseSerializer:
         headers: Iterable[tuple[bytes, bytes]],
         more_headers: bool,
     ) -> None:
-        message = (
-            f"HTTP/{http_version} {status}\n".encode()
-            + self.encode_headers(headers)
-        )
+        message = self.build_first_line(
+            http_version, status
+        ) + self.encode_headers(headers)
         if more_headers is False:
             message += b"\n"
         self.transport.write(message)
+
+    @staticmethod
+    def build_first_line(http_version: str, status: int) -> bytes:
+        return f"HTTP/{http_version} {status}\n".encode()
+
+    def send_at_once(
+        self,
+        http_version: str,
+        status: int,
+        headers: Iterable[tuple[bytes, bytes]],
+        body: bytes,
+    ) -> None:
+        message = (
+            self.build_first_line(http_version, status)
+            + self.encode_headers(headers)
+            + b"\n"
+            + body
+        )
+        self.transport.write(message)
+        self.transport.write_eof()
 
     def send_extra_headers(
         self,
