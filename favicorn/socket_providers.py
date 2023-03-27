@@ -16,17 +16,20 @@ class InetSocketProvider(ISocketProvider):
     port: int
     family: INET_FAMILY
     sock: socket.socket | None
+    reuse_address: bool
 
     def __init__(
         self,
         host: str,
         port: int,
         family: INET_FAMILY = socket.AddressFamily.AF_INET,
+        reuse_address: bool = False,
     ) -> None:
         self.host = host
         self.port = port
         self.family = family
         self.sock = None
+        self.reuse_address = reuse_address
 
     def acquire(self) -> socket.socket:
         if self.sock is None:
@@ -40,7 +43,9 @@ class InetSocketProvider(ISocketProvider):
         return sock
 
     def configure_socket(self, sock: socket.socket) -> None:
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.setsockopt(
+            socket.SOL_SOCKET, socket.SO_REUSEADDR, int(self.reuse_address)
+        )
 
     def cleanup(self) -> None:
         pass
@@ -48,11 +53,13 @@ class InetSocketProvider(ISocketProvider):
 
 class UnixSocketProvider(ISocketProvider):
     path: str
+    reuse_address: bool
     sock: socket.socket | None
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, reuse_address: bool = False) -> None:
         self.path = path
         self.sock = None
+        self.reuse_address = reuse_address
 
     def acquire(self) -> socket.socket:
         if self.sock is not None:
@@ -63,7 +70,9 @@ class UnixSocketProvider(ISocketProvider):
         return self.sock
 
     def configure_socket(self, sock: socket.socket) -> None:
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.setsockopt(
+            socket.SOL_SOCKET, socket.SO_REUSEADDR, int(self.reuse_address)
+        )
 
     def cleanup(self) -> None:
         os.unlink(self.path)

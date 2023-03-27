@@ -15,6 +15,7 @@ async def serving_app(
             host=host,
             port=port,
             family=socket.AddressFamily.AF_INET,
+            reuse_address=True,
         ),
         protocol_class=HTTPProtocol,
     )
