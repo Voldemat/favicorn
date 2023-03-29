@@ -51,6 +51,7 @@ class Server:
         if self._server is not None and self.server.is_serving():
             self.server.close()
             await self.server.wait_closed()
+        await self.global_state.cancel_all_tasks()
         self.socket_provider.cleanup()
 
     async def start_serving(self) -> None:

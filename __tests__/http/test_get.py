@@ -33,7 +33,7 @@ async def test_get() -> None:
             }
         )
 
-    async with serving_app(app, host="localhost", port=8000):
+    with serving_app(app, host="localhost", port=8000):
         async with httpx.AsyncClient() as client:
             response = await client.get("http://localhost:8000/check")
             assert response.status_code == 200, response.text
@@ -41,12 +41,17 @@ async def test_get() -> None:
 
 
 async def test_get_with_internal_server_error() -> None:
+    class TestException(BaseException):
+        pass
+
     async def app(
         scope: WWWScope, receive: ASGIReceiveCallable, send: ASGISendCallable
     ) -> None:
-        raise ValueError()
+        raise TestException()
 
-    async with serving_app(app, host="localhost", port=8000):
+    with serving_app(
+        app, host="localhost", port=8000, suppress_exceptions=(TestException,)
+    ):
         async with httpx.AsyncClient() as client:
             response = await client.get("http://localhost:8000")
             assert response.status_code == 500, response.text

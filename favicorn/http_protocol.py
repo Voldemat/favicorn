@@ -20,10 +20,11 @@ class HTTPProtocol(IProtocol):
         if not isinstance(transport, asyncio.Transport):
             raise ValueError("transport must be instance of asyncio.Transport")
         self.request_parser = HTTPRequestParser(transport)
+        self.response_serializer = HTTPResponseSerializer(transport)
         self.asgi_controller = ASGIController(
             app=self.app,
             request_parser=self.request_parser,
-            response_serializer=HTTPResponseSerializer(transport),
+            response_serializer=self.response_serializer,
         )
         self.global_state.add_task(
             asyncio.create_task(self.asgi_controller.start())
@@ -31,6 +32,7 @@ class HTTPProtocol(IProtocol):
 
     def connection_lost(self, exc: Exception | None) -> None:
         self.request_parser.disconnect()
+        self.response_serializer.close()
         if exc is not None:
             print(exc)
 

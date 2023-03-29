@@ -20,7 +20,7 @@ class HTTPResponseSerializer:
         ) + self.encode_headers(headers)
         if more_headers is False:
             message += b"\n"
-        self.transport.write(message)
+        self.write(message)
 
     @staticmethod
     def build_first_line(http_version: str, status: int) -> bytes:
@@ -39,8 +39,8 @@ class HTTPResponseSerializer:
             + b"\n"
             + body
         )
-        self.transport.write(message)
-        self.transport.write_eof()
+        self.write(message)
+        self.close()
 
     def send_extra_headers(
         self,
@@ -50,16 +50,20 @@ class HTTPResponseSerializer:
         message = self.encode_headers(headers)
         if more_headers is False:
             message += b"\n"
-        self.transport.write(message)
+        self.write(message)
+
+    def write(self, data: bytes) -> None:
+        if self.transport.is_closing() is False:
+            self.transport.write(data)
 
     def send_body(
         self,
         body: bytes,
         more_body: bool,
     ) -> None:
-        self.transport.write(body)
+        self.write(body)
         if more_body is False:
-            self.transport.write_eof()
+            self.close()
 
     def close(self) -> None:
         self.transport.write_eof()
