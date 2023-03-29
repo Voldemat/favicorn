@@ -1,20 +1,21 @@
 import asyncio
+from datetime import datetime
+from typing import Any
 
 from asgiref.typing import ASGI3Application
 
 from .asgi_controller import ASGIController
-from .iglobal_state import IGlobalState
 from .iprotocol import IProtocol
 from .request_parser import HTTPRequestParser
 from .response_serializer import HTTPResponseSerializer
 
 
 class HTTPProtocol(IProtocol):
-    def __init__(
-        self, global_state: IGlobalState, app: ASGI3Application
-    ) -> None:
+    latest_received_data_timestamp: datetime | None
+
+    def __init__(self, app: ASGI3Application) -> None:
         self.app = app
-        self.global_state = global_state
+        self.latest_received_data_timestamp = None
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         if not isinstance(transport, asyncio.Transport):
@@ -26,18 +27,30 @@ class HTTPProtocol(IProtocol):
             request_parser=self.request_parser,
             response_serializer=self.response_serializer,
         )
-        self.global_state.add_task(
-            asyncio.create_task(self.asgi_controller.start())
-        )
+        self.task = asyncio.create_task(self.asgi_controller.start())
+        self.transport = transport
 
     def connection_lost(self, exc: Exception | None) -> None:
         self.request_parser.disconnect()
-        self.response_serializer.close()
         if exc is not None:
             print(exc)
+        self.transport.close()
 
     def data_received(self, data: bytes) -> None:
+        self.latest_received_data_timestamp = datetime.now()
         self.request_parser.feed_data(data)
 
     def eof_received(self) -> bool:
         return False
+
+    def get_app_task(self) -> asyncio.Task[Any]:
+        return self.task
+
+    def is_keepalive(self) -> bool:
+        return self.response_serializer.keepalive
+
+    def get_latest_received_data_timestamp(self) -> datetime | None:
+        return self.latest_received_data_timestamp
+
+    def close(self) -> None:
+        self.transport.write_eof()

@@ -1,34 +1,48 @@
 import asyncio
-from typing import Any
+from typing import Any, Iterable
 
+from .config import Config
 from .iglobal_state import IGlobalState
+from .iprotocol import IProtocol
 
 
 class GlobalState(IGlobalState):
-    tasks: set[asyncio.Task[Any]]
-    tasks_wait_timeout: float
+    connections: list[IProtocol]
+    config: Config
 
-    def __init__(self, tasks_wait_timeout: float = 5) -> None:
-        self.tasks = set()
-        self.tasks_wait_timeout = tasks_wait_timeout
+    def __init__(
+        self,
+        config: Config,
+    ) -> None:
+        self.connections = []
+        self.config = config
 
-    def add_task(self, task: asyncio.Task[Any]) -> None:
-        self.tasks.add(task)
-        task.add_done_callback(self.remove_task)
+    def get_config(self) -> Config:
+        return self.config
 
-    def remove_task(self, task: asyncio.Task[Any]) -> None:
-        self.tasks.remove(task)
+    def add_connection(self, connection: IProtocol) -> None:
+        self.connections.append(connection)
 
-    async def cancel_all_tasks(self) -> None:
+    def get_connections(self) -> list[IProtocol]:
+        return self.connections
+
+    async def discard_all_connections(self) -> None:
         await self.wait_for_tasks_completion()
-        for task in self.tasks:
+        for task in self.get_app_tasks():
             task.cancel()
         try:
-            await asyncio.gather(*self.tasks)
+            await asyncio.gather(*self.get_app_tasks())
         except asyncio.CancelledError:
             pass
 
+    def get_app_tasks(self) -> Iterable[asyncio.Task[Any]]:
+        return map(lambda conn: conn.get_app_task(), self.connections)
+
     async def wait_for_tasks_completion(self) -> None:
-        await asyncio.wait_for(
-            asyncio.gather(*self.tasks), timeout=self.tasks_wait_timeout
-        )
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(*self.get_app_tasks()),
+                timeout=self.config.tasks_wait_timeout_s,
+            )
+        except asyncio.TimeoutError:
+            pass

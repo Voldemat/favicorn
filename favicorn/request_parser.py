@@ -1,5 +1,6 @@
 import asyncio
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Iterable, Literal
 
 import httptools
@@ -28,8 +29,8 @@ class HTTPRequestParser:
     body_event: asyncio.Event
     request_event: asyncio.Event
     headers: list[tuple[bytes, bytes]]
-    is_completed: bool
     transport: asyncio.Transport
+    latest_received_data_timestamp: datetime | None
 
     def __init__(
         self,
@@ -45,6 +46,7 @@ class HTTPRequestParser:
         self.request_event = asyncio.Event()
         self.more_body = True
         self.disconnected = False
+        self.latest_received_data_timestamp = None
 
     def disconnect(self) -> None:
         self.disconnected = True
@@ -106,6 +108,7 @@ class HTTPRequestParser:
         return (body, self.more_body)
 
     def feed_data(self, data: bytes) -> None:
+        self.latest_received_data_timestamp = datetime.now()
         self.parser.feed_data(data)
 
     def on_message_complete(self) -> None:

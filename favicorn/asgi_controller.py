@@ -81,7 +81,6 @@ class ASGIController:
             (b"Content-Length", str(len(content)).encode()),
         )
         self.response_serializer.send_at_once(
-            http_version="1.1",
             status=500,
             headers=headers,
             body=content,
@@ -98,7 +97,6 @@ class ASGIController:
                 else:
                     self.expected_event = HTTPResponseEvents.BODY
                 self.response_serializer.start(
-                    http_version="1.1",
                     status=event["status"],
                     headers=event["headers"],
                     more_headers=trailers,
@@ -122,7 +120,6 @@ class ASGIController:
                     more_body=more_body,
                 )
             case _:
-                self.response_serializer.close()
                 raise RuntimeError(f"Unhandled event type: {event['type']}")
 
     def encode_headers(self, headers: Iterable[tuple[bytes, bytes]]) -> bytes:

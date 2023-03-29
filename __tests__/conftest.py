@@ -60,5 +60,4 @@ def serving_app(
             app_exception is not None
             and type(app_exception) not in suppress_exceptions
         ):
-            breakpoint()
             raise app_exception

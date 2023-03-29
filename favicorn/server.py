@@ -3,11 +3,13 @@ from typing import Type
 
 from asgiref.typing import ASGI3Application
 
+from .config import Config
 from .global_state import GlobalState
 from .http_protocol import HTTPProtocol
 from .iglobal_state import IGlobalState
 from .iprotocol import IProtocol
 from .isocket_provider import ISocketProvider
+from .keepalive_manager import KeepAliveManager
 
 
 class Server:
@@ -22,15 +24,16 @@ class Server:
         app: ASGI3Application,
         socket_provider: ISocketProvider,
         protocol_class: Type[IProtocol] = HTTPProtocol,
-        global_state: IGlobalState | None = None,
+        config: Config | None = None,
     ) -> None:
-        if global_state is None:
-            global_state = GlobalState()
+        if config is None:
+            config = Config()
         self.socket_provider = socket_provider
         self.protocol_class = protocol_class
-        self.global_state = global_state
+        self.global_state = GlobalState(config=config)
         self._server = None
         self.app = app
+        self.keepalive_manager = KeepAliveManager(self.global_state)
 
     @property
     def server(self) -> asyncio.Server:
@@ -41,17 +44,25 @@ class Server:
     async def init(self) -> None:
         loop = asyncio.get_running_loop()
         sock = self.socket_provider.acquire()
+
+        def factory() -> IProtocol:
+            connection = self.protocol_class(self.app)
+            self.global_state.add_connection(connection)
+            return connection
+
         self._server = await loop.create_server(
-            lambda: self.protocol_class(self.global_state, self.app),
+            factory,
             sock=sock,
             start_serving=False,
         )
+        await self.keepalive_manager.start()
 
     async def close(self) -> None:
+        await self.keepalive_manager.stop()
         if self._server is not None and self.server.is_serving():
             self.server.close()
             await self.server.wait_closed()
-        await self.global_state.cancel_all_tasks()
+        await self.global_state.discard_all_connections()
         self.socket_provider.cleanup()
 
     async def start_serving(self) -> None:
