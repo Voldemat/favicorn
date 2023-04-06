@@ -2,7 +2,7 @@ import asyncio
 
 from asgiref.typing import ASGI3Application
 
-from .http_streams import InternalServer
+from .connection_manager import ConnectionManager
 from .isocket_provider import ISocketProvider
 from .parser import HTTPParser
 from .serializer import HTTPSerializer
@@ -19,16 +19,16 @@ class Server:
     ) -> None:
         self.app = app
         self.socket_provider = socket_provider
-        self.internal_server = InternalServer(
+        self.connection_manager = ConnectionManager(
             app=app,
-            parser=HTTPParser(),
-            serializer=HTTPSerializer(),
+            parser_class=HTTPParser,
+            serializer_class=HTTPSerializer,
         )
 
     async def init(self) -> None:
         sock = self.socket_provider.acquire()
         self._server = await asyncio.start_server(
-            self.internal_server.handler,
+            self.connection_manager.handler,
             sock=sock,
             start_serving=False,
         )

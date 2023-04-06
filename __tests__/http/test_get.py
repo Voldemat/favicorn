@@ -35,7 +35,9 @@ async def test_get() -> None:
 
     with serving_app(app, host="localhost", port=8000):
         async with httpx.AsyncClient() as client:
-            response = await client.get("http://localhost:8000/check")
+            response = await client.get(
+                "http://localhost:8000/check", headers={"Connection": "close"}
+            )
             assert response.status_code == 200, response.text
             assert response.text == "Hello world"
 
