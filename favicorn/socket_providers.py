@@ -50,6 +50,9 @@ class InetSocketProvider(ISocketProvider):
     def cleanup(self) -> None:
         pass
 
+    def get_addr(self) -> tuple[str, int] | None:
+        return (self.host, self.port)
+
 
 class UnixSocketProvider(ISocketProvider):
     path: str
@@ -76,3 +79,6 @@ class UnixSocketProvider(ISocketProvider):
 
     def cleanup(self) -> None:
         os.unlink(self.path)
+
+    def get_addr(self) -> tuple[str, int] | None:
+        return None

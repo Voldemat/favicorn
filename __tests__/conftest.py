@@ -3,7 +3,7 @@ import threading
 from contextlib import contextmanager
 from typing import Any, Awaitable, Callable, Generator, Sequence, Type
 
-from favicorn import Favicorn, HTTPProtocol, InetSocketProvider
+from favicorn import Favicorn, InetSocketProvider
 
 
 @contextmanager
@@ -36,7 +36,6 @@ def serving_app(
                 port=port,
                 reuse_address=True,
             ),
-            protocol_class=HTTPProtocol,
         )
         await s.init()
         await s.start_serving()

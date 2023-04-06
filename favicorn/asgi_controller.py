@@ -1,5 +1,9 @@
+from __future__ import annotations
+
+import asyncio
 import enum
-from typing import Iterable, cast
+from collections import deque
+from typing import Any, AsyncGenerator, cast
 
 from asgiref.typing import (
     ASGI3Application,
@@ -14,8 +18,8 @@ from asgiref.typing import (
     HTTPScope,
 )
 
-from .request_parser import HTTPRequestParser
-from .response_serializer import HTTPResponseSerializer
+from .parser import RequestMetadata
+from .serializer import ResponseMetadata
 
 
 class HTTPResponseEvents(enum.Enum):
@@ -24,54 +28,119 @@ class HTTPResponseEvents(enum.Enum):
     BODY = "http.response.body"
 
 
-class ASGIController:
+class Events:
+    body: asyncio.Event
+    new: asyncio.Event
+
+    def __init__(self) -> None:
+        self.body = asyncio.Event()
+        self.new = asyncio.Event()
+
+
+class ASGIController(AsyncGenerator[dict[str, Any], None]):
     app: ASGI3Application
-    request_parser: HTTPRequestParser
-    response_serializer: HTTPResponseSerializer
+    events: Events
+    queue: deque[dict[str, Any]]
+    task: asyncio.Task[Any] | None
+    body: bytes | None
+    more_body: bool
+    response_metadata: ResponseMetadata | None
     expected_event: HTTPResponseEvents | None
+    response_body: bytes | None
+    response_more_body: bool
 
     def __init__(
         self,
         app: ASGI3Application,
-        request_parser: HTTPRequestParser,
-        response_serializer: HTTPResponseSerializer,
+        root_path: str,
+        client: tuple[str, int] | None,
+        server: tuple[str, int] | None,
     ) -> None:
+        self.root_path = root_path
+        self.server = server
+        self.client = client
         self.app = app
-        self.request_parser = request_parser
-        self.response_serializer = response_serializer
+        self.events = Events()
+        self.task = None
+        self.body = None
+        self.more_body = True
         self.expected_event = HTTPResponseEvents.START
+        self.response_metadata = None
+        self.more_headers = True
+        self.response_body = None
+        self.response_more_body = True
+        self.queue = deque()
 
-    async def start(self) -> None:
-        request = await self.request_parser.get_request()
+    def is_started(self) -> bool:
+        return self.task is not None
+
+    def start(self, metadata: RequestMetadata) -> ASGIController:
         scope = HTTPScope(
             type="http",
+            scheme="http",
+            path=metadata.path,
             asgi=ASGIVersions(spec_version="2.3", version="3.0"),
-            http_version=request.http_version,
-            scheme=request.scheme,
-            path=request.path,
-            raw_path=request.raw_path,
-            query_string=request.query_string,
-            root_path=request.root_path,
-            headers=request.headers,
-            server=request.server,
-            client=request.client,
+            http_version=metadata.http_version,
+            raw_path=metadata.raw_path,
+            query_string=metadata.query_string,
+            headers=metadata.headers,
+            root_path=self.root_path,
+            server=self.server,
+            client=self.client,
             extensions={},
-            method=request.method,
+            method=metadata.method,
         )
+        self.task = asyncio.create_task(self.main(scope))
+        return self
+
+    def __aiter__(self) -> AsyncGenerator[dict[str, Any], None]:
+        return self
+
+    async def asend(self, _: dict[str, Any] | None) -> dict[str, Any]:
+        event = await self.get_event()
+        if event is None:
+            raise StopAsyncIteration()
+        return event
+
+    async def athrow(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await super().athrow(*args, **kwargs)
+
+    async def get_event(self) -> dict[str, Any] | None:
+        assert self.task is not None, "Application didn`t started yet"
+        await self.events.new.wait()
+        if len(self.queue) != 0:
+            return self.queue.popleft()
+        self.events.new.clear()
+        if self.task.done():
+            return None
+        return await self.get_event()
+
+    def dispatch_event(self, event: Any) -> None:
+        self.queue.append(event)
+        self.events.new.set()
+
+    async def main(self, scope: HTTPScope) -> None:
         try:
             await self.app(scope, self.receive, self.send)
         except BaseException as unhandled_error:
-            print(unhandled_error)
+            print("UnhandledError: ", unhandled_error)
             await self.send_500_response()
 
+    def receive_body(self, body: bytes, more_body: bool) -> None:
+        self.body = body
+        self.more_body = more_body
+        self.events.body.set()
+
     async def receive(self) -> ASGIReceiveEvent:
-        body, more_body = await self.request_parser.receive_body()
-        if body is None:
+        self.dispatch_event({"type": "receive"})
+        await self.events.body.wait()
+        self.events.body.clear()
+        if self.body is None:
             return HTTPDisconnectEvent(type="http.disconnect")
         return HTTPRequestEvent(
             type="http.request",
-            body=body,
-            more_body=more_body,
+            body=self.body,
+            more_body=self.more_body,
         )
 
     async def send_500_response(self) -> None:
@@ -80,50 +149,78 @@ class ASGIController:
             (b"Content-Type", b"text/plain; charset=utf-8"),
             (b"Content-Length", str(len(content)).encode()),
         )
-        self.response_serializer.send_at_once(
-            status=500,
-            headers=headers,
-            body=content,
+        self.dispatch_event(
+            {
+                "type": "send-metadata",
+                "metadata": ResponseMetadata(
+                    status=500,
+                    headers=headers,
+                ),
+            }
+        )
+        self.dispatch_event(
+            {
+                "type": "send-body",
+                "body": content,
+                "more_body": False,
+            }
         )
 
     async def send(self, event: ASGISendEvent) -> None:
         self.validate_event_type(event["type"])
-        match event["type"]:
-            case HTTPResponseEvents.START.value:
+        match HTTPResponseEvents(event["type"]):
+            case HTTPResponseEvents.START:
                 event = cast(HTTPResponseStartEvent, event)
+                self.response_metadata = ResponseMetadata(
+                    status=event["status"],
+                    headers=event["headers"],
+                )
                 trailers = event.get("trailers", False)
                 if trailers is True:
                     self.expected_event = HTTPResponseEvents.TRAILERS
                 else:
                     self.expected_event = HTTPResponseEvents.BODY
-                self.response_serializer.start(
-                    status=event["status"],
-                    headers=event["headers"],
-                    more_headers=trailers,
-                )
-            case HTTPResponseEvents.TRAILERS.value:
+                    self.dispatch_event(
+                        {
+                            "type": "send-metadata",
+                            "metadata": self.response_metadata,
+                        }
+                    )
+            case HTTPResponseEvents.TRAILERS:
+                assert (
+                    self.response_metadata is not None
+                ), "ResponseMetadata is not defined yet"
                 event = cast(HTTPResponseTrailersEvent, event)
                 more_trailers = event.get("more_trailers", False)
+                self.response_metadata.add_extra_headers(event["headers"])
                 if more_trailers is False:
                     self.expected_event = HTTPResponseEvents.BODY
-                self.response_serializer.send_extra_headers(
-                    event["headers"],
-                    more_trailers,
-                )
-            case HTTPResponseEvents.BODY.value:
+                    self.dispatch_event(
+                        {
+                            "type": "send-metadata",
+                            "metadata": self.response_metadata,
+                        }
+                    )
+            case HTTPResponseEvents.BODY:
                 event = cast(HTTPResponseBodyEvent, event)
                 more_body = event.get("more_body", False)
+                self.dispatch_event(
+                    {
+                        "type": "send-body",
+                        "body": event["body"],
+                        "more_body": more_body,
+                    }
+                )
                 if more_body is False:
                     self.expected_event = None
-                self.response_serializer.send_body(
-                    body=event["body"],
-                    more_body=more_body,
-                )
             case _:
                 raise RuntimeError(f"Unhandled event type: {event['type']}")
 
-    def encode_headers(self, headers: Iterable[tuple[bytes, bytes]]) -> bytes:
-        return b"".join(map(lambda h: h[0] + b": " + h[1] + b"\n", headers))
+    def get_body(self) -> tuple[bytes, bool]:
+        body = self.response_body
+        assert body is not None
+        self.response_body = b""
+        return body, self.response_more_body
 
     def validate_event_type(self, event_type: str) -> None:
         assert self.expected_event is not None, "Response already ended"
