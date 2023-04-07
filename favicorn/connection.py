@@ -1,4 +1,5 @@
 import asyncio
+from typing import Type, overload
 
 from asgiref.typing import ASGI3Application
 
@@ -12,16 +13,16 @@ class Connection:
     def __init__(
         self,
         app: ASGI3Application,
-        parser: HTTPParser,
-        serializer: HTTPSerializer,
+        parser_class: Type[HTTPParser],
+        serializer_class: Type[HTTPSerializer],
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
     ) -> None:
         self.reader = reader
         self.writer = writer
         self.app = app
-        self.parser = parser
-        self.serializer = serializer
+        self.parser_class = parser_class
+        self.serializer_class = serializer_class
         self.client = get_remote_addr(writer)
         self.keepalive = True
 
@@ -30,7 +31,9 @@ class Connection:
 
     async def main(self) -> None:
         while self.keepalive:
-            data = await asyncio.wait_for(self.read(), timeout=5)
+            data = await self.read(timeout=5)
+            if data is None:
+                break
             await self.handle_request(data)
 
     async def handle_request(self, data: bytes) -> None:
@@ -40,37 +43,73 @@ class Connection:
             client=self.client,
             server=("localhost", 8000),
         )
-        self.parser.feed_data(data)
-        while not self.parser.state.is_metadata_ready():
-            self.parser.feed_data(await self.read())
+        parser = self.parser_class()
+        serializer = self.serializer_class()
+        parser.feed_data(data)
+        while not parser.state.is_metadata_ready():
+            data = await self.read()
+            if data is None:
+                return
+            parser.feed_data(data)
 
-        metadata = self.parser.state.get_metadata()
+        metadata = parser.state.get_metadata()
         async for event in asgi_controller.start(metadata):
             if event["type"] == "receive":
-                if not self.parser.has_body():
-                    self.parser.feed_data(await self.read())
-                body = self.parser.get_body()
+                if not parser.has_body():
+                    data = await self.read()
+                    if data is None:
+                        asgi_controller.disconnect()
+                    else:
+                        parser.feed_data(data)
+                body = parser.get_body()
                 assert body is not None
-                asgi_controller.receive_body(body, self.parser.state.more_body)
+                asgi_controller.receive_body(body, parser.state.more_body)
             if event["type"] == "send-metadata":
-                self.serializer.receive_metadata(event["metadata"])
-                data = self.serializer.get_data()
+                serializer.receive_metadata(event["metadata"])
+                data = serializer.get_data()
                 self.write(data)
             if event["type"] == "send-body":
-                self.serializer.feed_body(event["body"], event["more_body"])
-                data = self.serializer.get_data()
+                serializer.feed_body(event["body"], event["more_body"])
+                data = serializer.get_data()
                 self.write(data)
 
-        await self.writer.drain()
-        self.keepalive = self.parser.state.is_keepalive()
+        await asgi_controller.stop()
+        self.keepalive = (
+            not self.writer.is_closing() and parser.state.is_keepalive()
+        )
+        if not self.writer.is_closing():
+            await self.writer.drain()
+        parser.reset()
+        serializer.reset()
 
-    async def read(self) -> bytes:
-        return await self.reader.read(4028)
+    @overload
+    async def read(self, timeout: None = None) -> bytes:
+        ...
+
+    @overload
+    async def read(self, timeout: int) -> bytes | None:
+        ...
+
+    async def read(self, timeout: int | None = None) -> bytes | None:
+        if timeout is None:
+            return await self._read()
+        try:
+            return await asyncio.wait_for(self._read(), timeout=timeout)
+        except asyncio.TimeoutError:
+            return None
+
+    async def _read(self) -> bytes | None:
+        data = await self.reader.read(4028)
+        if self.reader.at_eof():
+            return None
+        return data
 
     def write(self, data: bytes) -> None:
         self.writer.write(data)
 
     async def close(self) -> None:
+        if self.writer.is_closing():
+            return
         if self.writer.can_write_eof():
             self.writer.write_eof()
         self.writer.close()

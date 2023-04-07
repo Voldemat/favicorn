@@ -26,6 +26,11 @@ class HTTPSerializer:
     def is_response_started(self) -> bool:
         return self.is_metadata_received
 
+    def reset(self) -> None:
+        self.data = b""
+        self.is_metadata_received = False
+        self.is_response_completed = False
+
     def get_data(self) -> bytes:
         data = self.data
         self.data = b""

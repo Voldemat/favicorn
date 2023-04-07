@@ -93,6 +93,15 @@ class ASGIController(AsyncGenerator[dict[str, Any], None]):
         self.task = asyncio.create_task(self.main(scope))
         return self
 
+    async def stop(self) -> None:
+        if self.task is None or self.task.done():
+            return
+        self.task.cancel()
+        try:
+            await self.task
+        except asyncio.CancelledError:
+            pass
+
     def __aiter__(self) -> AsyncGenerator[dict[str, Any], None]:
         return self
 
@@ -123,12 +132,17 @@ class ASGIController(AsyncGenerator[dict[str, Any], None]):
         try:
             await self.app(scope, self.receive, self.send)
         except BaseException as unhandled_error:
-            print("UnhandledError: ", unhandled_error)
+            print("UnhandledError: ", unhandled_error.__repr__())
             await self.send_500_response()
 
     def receive_body(self, body: bytes, more_body: bool) -> None:
         self.body = body
         self.more_body = more_body
+        self.events.body.set()
+
+    def disconnect(self) -> None:
+        self.body = None
+        self.more_body = False
         self.events.body.set()
 
     async def receive(self) -> ASGIReceiveEvent:

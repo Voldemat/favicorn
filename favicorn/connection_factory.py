@@ -24,8 +24,8 @@ class ConnectionFactory:
     ) -> Connection:
         return Connection(
             self.app,
-            self.parser_class(),
-            self.serializer_class(),
+            self.parser_class,
+            self.serializer_class,
             reader,
             writer,
         )
