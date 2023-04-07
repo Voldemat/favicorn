@@ -17,11 +17,10 @@ async def test_disconnect() -> None:
         disconnect_event = await receive()
         assert disconnect_event["type"] == "http.disconnect"
 
-    host = "localhost"
+    host = "0.0.0.0"
     port = 8000
     with serving_app(app, host=host, port=port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            await asyncio.sleep(0)
             sock.connect((host, port))
             sock.sendall(b"GET / HTTP/1.1\n\n")
             time.sleep(0.01)
