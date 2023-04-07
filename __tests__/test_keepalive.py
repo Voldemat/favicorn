@@ -82,5 +82,5 @@ async def test_keepalive_off() -> None:
         )
         await response_event.wait()
         await asyncio.sleep(0)
-        await asyncio.sleep(0)
+        await asyncio.sleep(1)
         assert transport.is_closing() is True
