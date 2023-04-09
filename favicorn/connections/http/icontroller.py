@@ -1,14 +1,38 @@
 from abc import ABC, abstractmethod
-from typing import Any, AsyncGenerator
+from dataclasses import dataclass
+from typing import AsyncGenerator
 
 from .parser import RequestMetadata
+from .serializer import ResponseMetadata
+
+
+@dataclass
+class HTTPControllerReceiveEvent:
+    pass
+
+
+@dataclass
+class HTTPControllerSendMetadataEvent:
+    metadata: ResponseMetadata
+
+
+@dataclass
+class HTTPControllerSendBodyEvent:
+    body: bytes
+
+
+HTTPControllerEvent = (
+    HTTPControllerReceiveEvent
+    | HTTPControllerSendMetadataEvent
+    | HTTPControllerSendBodyEvent
+)
 
 
 class IHTTPController(ABC):
     @abstractmethod
     def start(
         self, metadata: RequestMetadata
-    ) -> AsyncGenerator[dict[str, Any], None]:
+    ) -> AsyncGenerator[HTTPControllerEvent, None]:
         raise NotImplementedError
 
     @abstractmethod

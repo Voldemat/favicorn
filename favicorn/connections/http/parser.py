@@ -97,13 +97,26 @@ class HTTPParser:
         self.body_event.set()
 
     def has_body(self) -> bool:
-        return self.body_event.is_set()
+        return self.body_event.is_set() and self.state.body is not None
 
-    def get_body(self) -> bytes | None:
+    def get_body(self) -> bytes:
         self.body_event.clear()
         body = self.state.body
         self.state.body = None
+        assert body is not None
         return body
+
+    def is_metadata_ready(self) -> bool:
+        return self.state.is_metadata_ready()
+
+    def get_metadata(self) -> RequestMetadata:
+        return self.state.get_metadata()
+
+    def is_keepalive(self) -> bool:
+        return self.state.is_keepalive()
+
+    def is_more_body(self) -> bool:
+        return self.state.more_body
 
     def feed_data(self, data: bytes) -> None:
         self.parser.feed_data(data)

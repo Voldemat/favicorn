@@ -7,6 +7,11 @@ from favicorn.iconnection import IConnection
 from favicorn.utils import get_remote_addr
 
 from .controllers import ASGIController
+from .icontroller import (
+    HTTPControllerReceiveEvent,
+    HTTPControllerSendBodyEvent,
+    HTTPControllerSendMetadataEvent,
+)
 from .parser import HTTPParser
 from .serializer import HTTPSerializer
 
@@ -48,41 +53,37 @@ class HTTPConnection(IConnection):
         parser = self.parser_class()
         serializer = self.serializer_class()
         parser.feed_data(data)
-        while not parser.state.is_metadata_ready():
+        while not parser.is_metadata_ready():
             data = await self.read()
             if data is None:
                 return
             parser.feed_data(data)
 
-        metadata = parser.state.get_metadata()
+        metadata = parser.get_metadata()
         async for event in asgi_controller.start(metadata):
-            if event["type"] == "receive":
+            if isinstance(event, HTTPControllerReceiveEvent):
                 if not parser.has_body():
-                    data = await self.read()
-                    if data is None:
-                        asgi_controller.disconnect()
-                    else:
+                    if data := await self.read():
                         parser.feed_data(data)
-                body = parser.get_body()
-                assert body is not None
-                asgi_controller.receive_body(body, parser.state.more_body)
-            if event["type"] == "send-metadata":
-                serializer.receive_metadata(event["metadata"])
-                data = serializer.get_data()
-                self.write(data)
-            if event["type"] == "send-body":
-                serializer.feed_body(event["body"], event["more_body"])
-                data = serializer.get_data()
-                self.write(data)
+                    else:
+                        asgi_controller.disconnect()
+                        continue
+                asgi_controller.receive_body(
+                    parser.get_body(), parser.is_more_body()
+                )
+            elif isinstance(event, HTTPControllerSendMetadataEvent):
+                serializer.receive_metadata(event.metadata)
+                self.write(serializer.get_data())
+            elif isinstance(event, HTTPControllerSendBodyEvent):
+                serializer.feed_body(event.body)
+                self.write(serializer.get_data())
+            else:
+                raise ValueError(f"Unhandled event type {type(event)}")
 
         await asgi_controller.stop()
-        self.keepalive = (
-            not self.writer.is_closing() and parser.state.is_keepalive()
-        )
+        self.keepalive = not self.writer.is_closing() and parser.is_keepalive()
         if not self.writer.is_closing():
             await self.writer.drain()
-        parser.reset()
-        serializer.reset()
 
     @overload
     async def read(self, timeout: None = None) -> bytes:

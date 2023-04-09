@@ -1,10 +1,6 @@
 import asyncio
 
 
-def is_ssl(transport: asyncio.Transport) -> bool:
-    return transport.get_extra_info("sslcontext") is None
-
-
 def get_remote_addr(transport: asyncio.StreamWriter) -> tuple[str, int] | None:
     if socket_info := transport.get_extra_info("socket"):
         if info := socket_info.getpeername():

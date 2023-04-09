@@ -18,7 +18,13 @@ from asgiref.typing import (
     HTTPScope,
 )
 
-from ..icontroller import IHTTPController
+from ..icontroller import (
+    HTTPControllerEvent,
+    HTTPControllerReceiveEvent,
+    HTTPControllerSendBodyEvent,
+    HTTPControllerSendMetadataEvent,
+    IHTTPController,
+)
 from ..parser import RequestMetadata
 from ..serializer import ResponseMetadata
 
@@ -38,10 +44,12 @@ class Events:
         self.new = asyncio.Event()
 
 
-class ASGIController(IHTTPController, AsyncGenerator[dict[str, Any], None]):
+class ASGIController(
+    IHTTPController, AsyncGenerator[HTTPControllerEvent, None]
+):
     app: ASGI3Application
     events: Events
-    queue: deque[dict[str, Any]]
+    queue: deque[HTTPControllerEvent]
     task: asyncio.Task[Any] | None
     body: bytes | None
     more_body: bool
@@ -74,7 +82,7 @@ class ASGIController(IHTTPController, AsyncGenerator[dict[str, Any], None]):
 
     def start(
         self, metadata: RequestMetadata
-    ) -> AsyncGenerator[dict[str, Any], None]:
+    ) -> AsyncGenerator[HTTPControllerEvent, None]:
         scope = HTTPScope(
             type="http",
             scheme="http",
@@ -102,19 +110,19 @@ class ASGIController(IHTTPController, AsyncGenerator[dict[str, Any], None]):
         except asyncio.CancelledError:
             pass
 
-    def __aiter__(self) -> AsyncGenerator[dict[str, Any], None]:
+    def __aiter__(self) -> AsyncGenerator[HTTPControllerEvent, None]:
         return self
 
-    async def asend(self, _: dict[str, Any] | None) -> dict[str, Any]:
+    async def asend(self, _: dict[str, Any] | None) -> HTTPControllerEvent:
         event = await self.get_event()
         if event is None:
             raise StopAsyncIteration()
         return event
 
-    async def athrow(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+    async def athrow(self, *args: Any, **kwargs: Any) -> HTTPControllerEvent:
         return await super().athrow(*args, **kwargs)
 
-    async def get_event(self) -> dict[str, Any] | None:
+    async def get_event(self) -> HTTPControllerEvent | None:
         assert self.task is not None, "Application didn`t started yet"
         await self.events.new.wait()
         if len(self.queue) != 0:
@@ -124,7 +132,7 @@ class ASGIController(IHTTPController, AsyncGenerator[dict[str, Any], None]):
             return None
         return await self.get_event()
 
-    def dispatch_event(self, event: Any) -> None:
+    def dispatch_event(self, event: HTTPControllerEvent) -> None:
         self.queue.append(event)
         self.events.new.set()
 
@@ -146,7 +154,7 @@ class ASGIController(IHTTPController, AsyncGenerator[dict[str, Any], None]):
         self.events.body.set()
 
     async def receive(self) -> ASGIReceiveEvent:
-        self.dispatch_event({"type": "receive"})
+        self.dispatch_event(HTTPControllerReceiveEvent())
         await self.events.body.wait()
         self.events.body.clear()
         if self.body is None:
@@ -164,21 +172,14 @@ class ASGIController(IHTTPController, AsyncGenerator[dict[str, Any], None]):
             (b"Content-Length", str(len(content)).encode()),
         )
         self.dispatch_event(
-            {
-                "type": "send-metadata",
-                "metadata": ResponseMetadata(
+            HTTPControllerSendMetadataEvent(
+                metadata=ResponseMetadata(
                     status=500,
                     headers=headers,
                 ),
-            }
+            )
         )
-        self.dispatch_event(
-            {
-                "type": "send-body",
-                "body": content,
-                "more_body": False,
-            }
-        )
+        self.dispatch_event(HTTPControllerSendBodyEvent(body=content))
 
     async def send(self, event: ASGISendEvent) -> None:
         self.validate_event_type(event["type"])
@@ -195,10 +196,9 @@ class ASGIController(IHTTPController, AsyncGenerator[dict[str, Any], None]):
                 else:
                     self.expected_event = HTTPResponseEvents.BODY
                     self.dispatch_event(
-                        {
-                            "type": "send-metadata",
-                            "metadata": self.response_metadata,
-                        }
+                        HTTPControllerSendMetadataEvent(
+                            metadata=self.response_metadata,
+                        )
                     )
             case HTTPResponseEvents.TRAILERS:
                 assert (
@@ -210,20 +210,15 @@ class ASGIController(IHTTPController, AsyncGenerator[dict[str, Any], None]):
                 if more_trailers is False:
                     self.expected_event = HTTPResponseEvents.BODY
                     self.dispatch_event(
-                        {
-                            "type": "send-metadata",
-                            "metadata": self.response_metadata,
-                        }
+                        HTTPControllerSendMetadataEvent(
+                            metadata=self.response_metadata,
+                        )
                     )
             case HTTPResponseEvents.BODY:
                 event = cast(HTTPResponseBodyEvent, event)
                 more_body = event.get("more_body", False)
                 self.dispatch_event(
-                    {
-                        "type": "send-body",
-                        "body": event["body"],
-                        "more_body": more_body,
-                    }
+                    HTTPControllerSendBodyEvent(body=event["body"])
                 )
                 if more_body is False:
                     self.expected_event = None

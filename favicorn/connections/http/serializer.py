@@ -18,18 +18,10 @@ class ResponseMetadata:
 
 
 class HTTPSerializer:
+    data: bytes
+
     def __init__(self) -> None:
         self.data = b""
-        self.is_response_completed = False
-        self.is_metadata_received = False
-
-    def is_response_started(self) -> bool:
-        return self.is_metadata_received
-
-    def reset(self) -> None:
-        self.data = b""
-        self.is_metadata_received = False
-        self.is_response_completed = False
 
     def get_data(self) -> bytes:
         data = self.data
@@ -48,7 +40,6 @@ class HTTPSerializer:
             + b"\r\n"
         )
         self.add_data(message)
-        self.is_metadata_received = True
 
     def add_data(self, data: bytes) -> None:
         self.data += data
@@ -65,17 +56,8 @@ class HTTPSerializer:
             (b"Server", b"favicorn"),
         )
 
-    def feed_body(
-        self,
-        body: bytes,
-        more_body: bool,
-    ) -> None:
+    def feed_body(self, body: bytes) -> None:
         self.add_data(body)
-        if more_body is False:
-            self.finish_response()
-
-    def finish_response(self) -> None:
-        self.is_response_completed = True
 
     def encode_headers(self, headers: Iterable[tuple[bytes, bytes]]) -> bytes:
         return b"".join(map(lambda h: h[0] + b": " + h[1] + b"\r\n", headers))
