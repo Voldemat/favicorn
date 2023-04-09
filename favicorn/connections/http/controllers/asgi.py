@@ -18,8 +18,9 @@ from asgiref.typing import (
     HTTPScope,
 )
 
-from .connections.http.parser import RequestMetadata
-from .connections.http.serializer import ResponseMetadata
+from ..icontroller import IHTTPController
+from ..parser import RequestMetadata
+from ..serializer import ResponseMetadata
 
 
 class HTTPResponseEvents(enum.Enum):
@@ -37,7 +38,7 @@ class Events:
         self.new = asyncio.Event()
 
 
-class ASGIController(AsyncGenerator[dict[str, Any], None]):
+class ASGIController(IHTTPController, AsyncGenerator[dict[str, Any], None]):
     app: ASGI3Application
     events: Events
     queue: deque[dict[str, Any]]
@@ -71,10 +72,9 @@ class ASGIController(AsyncGenerator[dict[str, Any], None]):
         self.response_more_body = True
         self.queue = deque()
 
-    def is_started(self) -> bool:
-        return self.task is not None
-
-    def start(self, metadata: RequestMetadata) -> ASGIController:
+    def start(
+        self, metadata: RequestMetadata
+    ) -> AsyncGenerator[dict[str, Any], None]:
         scope = HTTPScope(
             type="http",
             scheme="http",
@@ -229,12 +229,6 @@ class ASGIController(AsyncGenerator[dict[str, Any], None]):
                     self.expected_event = None
             case _:
                 raise RuntimeError(f"Unhandled event type: {event['type']}")
-
-    def get_body(self) -> tuple[bytes, bool]:
-        body = self.response_body
-        assert body is not None
-        self.response_body = b""
-        return body, self.response_more_body
 
     def validate_event_type(self, event_type: str) -> None:
         assert self.expected_event is not None, "Response already ended"

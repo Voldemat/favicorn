@@ -3,10 +3,10 @@ from typing import Callable, overload
 
 from asgiref.typing import ASGI3Application
 
-from favicorn.asgi_controller import ASGIController
 from favicorn.iconnection import IConnection
 from favicorn.utils import get_remote_addr
 
+from .controllers import ASGIController
 from .parser import HTTPParser
 from .serializer import HTTPSerializer
 
