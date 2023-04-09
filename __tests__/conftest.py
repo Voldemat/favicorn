@@ -4,12 +4,12 @@ from contextlib import contextmanager
 from typing import Any, Awaitable, Callable, Generator, Sequence, Type
 
 from favicorn import (
-    Favicorn,
-    InetSocketProvider,
     ConnectionManager,
+    Favicorn,
+    HTTPConnectionFactory,
     HTTPParser,
     HTTPSerializer,
-    HTTPConnectionFactory,
+    InetSocketProvider,
 )
 
 
