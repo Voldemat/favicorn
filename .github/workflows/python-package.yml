@@ -29,8 +29,6 @@ jobs:
       run: black --check . && flake8 .
     - name: Test with mypy and pytest
       run: |
-        nslookup localhost
-        curl localhost
         mypy .
         pytest .
     - name: Install build tools
