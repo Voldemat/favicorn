@@ -16,7 +16,7 @@ async def test_disconnect() -> None:
         disconnect_event = await receive()
         assert disconnect_event["type"] == "http.disconnect"
 
-    host = "0.0.0.0"
+    host = "localhost"
     port = 8000
     with serving_app(app, host=host, port=port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
