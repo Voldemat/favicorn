@@ -3,7 +3,14 @@ import threading
 from contextlib import contextmanager
 from typing import Any, Awaitable, Callable, Generator, Sequence, Type
 
-from favicorn import Favicorn, InetSocketProvider
+from favicorn import (
+    Favicorn,
+    InetSocketProvider,
+    ConnectionManager,
+    HTTPParser,
+    HTTPSerializer,
+    HTTPConnectionFactory,
+)
 
 
 @contextmanager
@@ -30,7 +37,13 @@ def serving_app(
         port: int,
     ) -> None:
         s = Favicorn(
-            app=app,
+            connection_manager=ConnectionManager(
+                connection_factory=HTTPConnectionFactory(
+                    app=app,
+                    parser_factory=HTTPParser,
+                    serializer_factory=HTTPSerializer,
+                )
+            ),
             socket_provider=InetSocketProvider(
                 host=host,
                 port=port,

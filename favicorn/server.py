@@ -1,29 +1,20 @@
 import asyncio
 
-from asgiref.typing import ASGI3Application
-
-from .connection_manager import ConnectionManager
+from .iconnection_manager import IConnectionManager
 from .isocket_provider import ISocketProvider
-from .parser import HTTPParser
-from .serializer import HTTPSerializer
 
 
 class Server:
-    app: ASGI3Application
     socket_provider: ISocketProvider
+    connection_manager: IConnectionManager
 
     def __init__(
         self,
-        app: ASGI3Application,
         socket_provider: ISocketProvider,
+        connection_manager: IConnectionManager,
     ) -> None:
-        self.app = app
         self.socket_provider = socket_provider
-        self.connection_manager = ConnectionManager(
-            app=app,
-            parser_class=HTTPParser,
-            serializer_class=HTTPSerializer,
-        )
+        self.connection_manager = connection_manager
 
     async def init(self) -> None:
         sock = self.socket_provider.acquire()

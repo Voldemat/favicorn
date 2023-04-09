@@ -1,25 +1,15 @@
 import asyncio
-from typing import Type
 
-from asgiref.typing import ASGI3Application
-
-from .connection_factory import ConnectionFactory
-from .parser import HTTPParser
-from .serializer import HTTPSerializer
+from .iconnection_factory import IConnectionFactory
+from .iconnection_manager import IConnectionManager
 
 
-class ConnectionManager:
+class ConnectionManager(IConnectionManager):
     def __init__(
         self,
-        app: ASGI3Application,
-        parser_class: Type[HTTPParser],
-        serializer_class: Type[HTTPSerializer],
+        connection_factory: IConnectionFactory,
     ) -> None:
-        self.connection_factory = ConnectionFactory(
-            app,
-            parser_class,
-            serializer_class,
-        )
+        self.connection_factory = connection_factory
 
     async def handler(
         self,
@@ -28,5 +18,7 @@ class ConnectionManager:
     ) -> None:
         connection = self.connection_factory.build(reader, writer)
         await connection.init()
-        await connection.main()
-        await connection.close()
+        try:
+            await connection.main()
+        finally:
+            await connection.close()

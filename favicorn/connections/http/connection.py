@@ -1,20 +1,22 @@
 import asyncio
-from typing import Type, overload
+from typing import Callable, overload
 
 from asgiref.typing import ASGI3Application
 
-from .asgi_controller import ASGIController
+from favicorn.asgi_controller import ASGIController
+from favicorn.iconnection import IConnection
+from favicorn.utils import get_remote_addr
+
 from .parser import HTTPParser
 from .serializer import HTTPSerializer
-from .utils import get_remote_addr
 
 
-class Connection:
+class HTTPConnection(IConnection):
     def __init__(
         self,
         app: ASGI3Application,
-        parser_class: Type[HTTPParser],
-        serializer_class: Type[HTTPSerializer],
+        parser_class: Callable[[], HTTPParser],
+        serializer_class: Callable[[], HTTPSerializer],
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
     ) -> None:

@@ -1,4 +1,4 @@
-from favicorn.parser import HTTPParser
+from favicorn.connections.http.parser import HTTPParser
 
 import pytest
 

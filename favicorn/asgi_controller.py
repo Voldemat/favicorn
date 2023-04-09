@@ -18,8 +18,8 @@ from asgiref.typing import (
     HTTPScope,
 )
 
-from .parser import RequestMetadata
-from .serializer import ResponseMetadata
+from .connections.http.parser import RequestMetadata
+from .connections.http.serializer import ResponseMetadata
 
 
 class HTTPResponseEvents(enum.Enum):

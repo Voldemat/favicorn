@@ -1,9 +1,9 @@
 import itertools
+import time
 from dataclasses import dataclass
+from email.utils import formatdate
 from http import HTTPStatus
 from typing import Iterable
-
-from .utils import get_date_in_email_format
 
 
 @dataclass
@@ -61,7 +61,7 @@ class HTTPSerializer:
     @staticmethod
     def get_default_headers() -> Iterable[tuple[bytes, bytes]]:
         return (
-            (b"Date", get_date_in_email_format().encode()),
+            (b"Date", formatdate(time.time(), usegmt=True).encode()),
             (b"Server", b"favicorn"),
         )
 
