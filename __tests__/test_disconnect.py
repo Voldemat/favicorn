@@ -20,6 +20,7 @@ async def test_disconnect() -> None:
     port = 8000
     with serving_app(app, host=host, port=port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            time.sleep(1)
             sock.connect((host, port))
             sock.sendall(b"GET / HTTP/1.1\n\n")
             time.sleep(0.01)
