@@ -62,12 +62,8 @@ class ASGIController(
         self,
         app: ASGI3Application,
         root_path: str,
-        client: tuple[str, int] | None,
-        server: tuple[str, int] | None,
     ) -> None:
         self.root_path = root_path
-        self.server = server
-        self.client = client
         self.app = app
         self.events = Events()
         self.task = None
@@ -81,7 +77,7 @@ class ASGIController(
         self.queue = deque()
 
     def start(
-        self, metadata: RequestMetadata
+        self, metadata: RequestMetadata, client: tuple[str, int] | None
     ) -> AsyncGenerator[HTTPControllerEvent, None]:
         scope = HTTPScope(
             type="http",
@@ -93,8 +89,8 @@ class ASGIController(
             query_string=metadata.query_string,
             headers=metadata.headers,
             root_path=self.root_path,
-            server=self.server,
-            client=self.client,
+            server=None,
+            client=client,
             extensions={},
             method=metadata.method,
         )

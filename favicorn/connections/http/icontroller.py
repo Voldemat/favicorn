@@ -31,7 +31,9 @@ HTTPControllerEvent = (
 class IHTTPController(ABC):
     @abstractmethod
     def start(
-        self, metadata: RequestMetadata
+        self,
+        metadata: RequestMetadata,
+        client: tuple[str, int] | None,
     ) -> AsyncGenerator[HTTPControllerEvent, None]:
         raise NotImplementedError
 

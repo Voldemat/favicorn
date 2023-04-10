@@ -6,6 +6,7 @@ from typing import Any, Awaitable, Callable, Generator, Sequence, Type
 from favicorn import (
     ConnectionManager,
     Favicorn,
+    HTTPASGIController,
     HTTPConnectionFactory,
     HTTPParser,
     HTTPSerializer,
@@ -39,7 +40,10 @@ def serving_app(
         s = Favicorn(
             connection_manager=ConnectionManager(
                 connection_factory=HTTPConnectionFactory(
-                    app=app,
+                    controller=HTTPASGIController(
+                        app=app,
+                        root_path="",
+                    ),
                     parser_factory=HTTPParser,
                     serializer_factory=HTTPSerializer,
                 )

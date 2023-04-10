@@ -1,5 +1,6 @@
 from .connection_manager import ConnectionManager
 from .connections import (
+    HTTPASGIController,
     HTTPConnection,
     HTTPConnectionFactory,
     HTTPParser,
@@ -23,4 +24,5 @@ __all__ = (
     "IConnectionFactory",
     "HTTPConnectionFactory",
     "HTTPConnection",
+    "HTTPASGIController",
 )

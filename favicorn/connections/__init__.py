@@ -1,4 +1,5 @@
 from .http import (
+    HTTPASGIController,
     HTTPConnection,
     HTTPConnectionFactory,
     HTTPParser,
@@ -11,4 +12,5 @@ __all__ = (
     "HTTPConnectionFactory",
     "HTTPParser",
     "HTTPSerializer",
+    "HTTPASGIController",
 )

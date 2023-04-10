@@ -16,7 +16,10 @@ class ConnectionManager(IConnectionManager):
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
     ) -> None:
-        connection = self.connection_factory.build(reader, writer)
+        connection = self.connection_factory.build(
+            reader,
+            writer,
+        )
         await connection.init()
         try:
             await connection.main()
