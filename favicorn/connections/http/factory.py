@@ -6,16 +6,16 @@ from favicorn.iconnection_factory import IConnectionFactory
 
 from .connection import HTTPConnection
 from .icontroller_factory import IHTTPControllerFactory
-from .parser import HTTPParser
-from .serializer import HTTPSerializer
+from .iparser import IHTTPParser
+from .iserializer import IHTTPSerializer
 
 
 class HTTPConnectionFactory(IConnectionFactory):
     def __init__(
         self,
         controller_factory: IHTTPControllerFactory,
-        parser_factory: Callable[[], HTTPParser],
-        serializer_factory: Callable[[], HTTPSerializer],
+        parser_factory: Callable[[], IHTTPParser],
+        serializer_factory: Callable[[], IHTTPSerializer],
     ) -> None:
         self.parser_factory = parser_factory
         self.controller_factory = controller_factory

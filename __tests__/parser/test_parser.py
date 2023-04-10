@@ -1,14 +1,14 @@
-from favicorn.connections.http.parser import HTTPParser
+from favicorn.connections.http.parsers import HTTPToolsParser
 
 import pytest
 
 
 @pytest.fixture
-def parser() -> HTTPParser:
-    return HTTPParser()
+def parser() -> HTTPToolsParser:
+    return HTTPToolsParser()
 
 
-async def test_parser(parser: HTTPParser) -> None:
+async def test_parser(parser: HTTPToolsParser) -> None:
     parser.feed_data(b"GET / HTTP/1.1\r\n\r\n\r\n")
     assert parser.state.is_metadata_ready()
     g_request = parser.state.get_metadata()
@@ -35,7 +35,7 @@ async def test_parser(parser: HTTPParser) -> None:
     assert parser.state.more_body is False
 
 
-async def test_parser_with_h10(parser: HTTPParser) -> None:
+async def test_parser_with_h10(parser: HTTPToolsParser) -> None:
     parser.feed_data(b"GET / HTTP/1.0\r\n\r\n\r\n")
     g_request = parser.state.get_metadata()
     assert g_request.method == "GET"
@@ -44,7 +44,7 @@ async def test_parser_with_h10(parser: HTTPParser) -> None:
     assert parser.get_body() == b""
     assert parser.state.more_body is False
     assert parser.state.is_keepalive() is False
-    parser = HTTPParser()
+    parser = HTTPToolsParser()
     parser.feed_data(
         b"POST / HTTP/1.0\r\n"
         b"Connection: Keep-Alive\r\n"

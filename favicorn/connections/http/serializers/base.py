@@ -1,23 +1,14 @@
 import itertools
 import time
-from dataclasses import dataclass
 from email.utils import formatdate
 from http import HTTPStatus
 from typing import Iterable
 
-
-@dataclass
-class ResponseMetadata:
-    status: int
-    headers: Iterable[tuple[bytes, bytes]]
-
-    def add_extra_headers(
-        self, headers: Iterable[tuple[bytes, bytes]]
-    ) -> None:
-        self.headers = itertools.chain(self.headers, headers)
+from ..iserializer import IHTTPSerializer
+from ..response_metadata import ResponseMetadata
 
 
-class HTTPSerializer:
+class BaseHTTPSerializer(IHTTPSerializer):
     data: bytes
 
     def __init__(self) -> None:
@@ -56,7 +47,7 @@ class HTTPSerializer:
             (b"Server", b"favicorn"),
         )
 
-    def feed_body(self, body: bytes) -> None:
+    def receive_body(self, body: bytes) -> None:
         self.add_data(body)
 
     def encode_headers(self, headers: Iterable[tuple[bytes, bytes]]) -> bytes:

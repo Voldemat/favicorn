@@ -4,12 +4,12 @@ from contextlib import contextmanager
 from typing import Any, Awaitable, Callable, Generator, Sequence, Type
 
 from favicorn import (
+    BaseHTTPSerializer,
     ConnectionManager,
     Favicorn,
     HTTPASGIControllerFactory,
     HTTPConnectionFactory,
-    HTTPParser,
-    HTTPSerializer,
+    HTTPToolsParser,
     InetSocketProvider,
 )
 
@@ -41,8 +41,8 @@ def serving_app(
             connection_manager=ConnectionManager(
                 connection_factory=HTTPConnectionFactory(
                     controller_factory=HTTPASGIControllerFactory(app),
-                    parser_factory=HTTPParser,
-                    serializer_factory=HTTPSerializer,
+                    parser_factory=HTTPToolsParser,
+                    serializer_factory=BaseHTTPSerializer,
                 )
             ),
             socket_provider=InetSocketProvider(

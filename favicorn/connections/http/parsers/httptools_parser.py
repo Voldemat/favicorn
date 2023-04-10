@@ -2,19 +2,11 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from typing import Iterable
 
 import httptools
 
-
-@dataclass
-class RequestMetadata:
-    path: str
-    method: str
-    raw_path: bytes
-    http_version: str
-    query_string: bytes
-    headers: Iterable[tuple[bytes, bytes]]
+from ..iparser import IHTTPParser
+from ..request_metadata import RequestMetadata
 
 
 @dataclass
@@ -59,7 +51,7 @@ class HTTPParserState:
         return self.request_connection_close is False
 
 
-class HTTPParser:
+class HTTPToolsParser(IHTTPParser):
     state: HTTPParserState
     parser: httptools.HttpRequestParser
 

@@ -10,16 +10,16 @@ from .icontroller import (
     HTTPControllerSendMetadataEvent,
 )
 from .icontroller_factory import IHTTPControllerFactory
-from .parser import HTTPParser
-from .serializer import HTTPSerializer
+from .iparser import IHTTPParser
+from .iserializer import IHTTPSerializer
 
 
 class HTTPConnection(IConnection):
     def __init__(
         self,
         controller_factory: IHTTPControllerFactory,
-        parser_factory: Callable[[], HTTPParser],
-        serializer_factory: Callable[[], HTTPSerializer],
+        parser_factory: Callable[[], IHTTPParser],
+        serializer_factory: Callable[[], IHTTPSerializer],
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
     ) -> None:
@@ -70,7 +70,7 @@ class HTTPConnection(IConnection):
                 serializer.receive_metadata(event.metadata)
                 self.write(serializer.get_data())
             elif isinstance(event, HTTPControllerSendBodyEvent):
-                serializer.feed_body(event.body)
+                serializer.receive_body(event.body)
                 self.write(serializer.get_data())
             else:
                 raise ValueError(f"Unhandled event type {type(event)}")

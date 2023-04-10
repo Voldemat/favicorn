@@ -25,8 +25,8 @@ from favicorn.connections.http.icontroller import (
     HTTPControllerSendMetadataEvent,
     IHTTPController,
 )
-from favicorn.connections.http.parser import RequestMetadata
-from favicorn.connections.http.serializer import ResponseMetadata
+from favicorn.connections.http.request_metadata import RequestMetadata
+from favicorn.connections.http.response_metadata import ResponseMetadata
 
 
 class HTTPResponseEvents(enum.Enum):

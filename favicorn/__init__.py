@@ -1,11 +1,11 @@
 from .connection_manager import ConnectionManager
 from .connections import (
+    BaseHTTPSerializer,
     HTTPASGIController,
     HTTPASGIControllerFactory,
     HTTPConnection,
     HTTPConnectionFactory,
-    HTTPParser,
-    HTTPSerializer,
+    HTTPToolsParser,
 )
 from .iconnection_factory import IConnectionFactory
 from .iconnection_manager import IConnectionManager
@@ -18,8 +18,8 @@ __all__ = (
     "ISocketProvider",
     "InetSocketProvider",
     "UnixSocketProvider",
-    "HTTPParser",
-    "HTTPSerializer",
+    "HTTPToolsParser",
+    "BaseHTTPSerializer",
     "ConnectionManager",
     "IConnectionManager",
     "IConnectionFactory",

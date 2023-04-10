@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import AsyncGenerator
 
-from .parser import RequestMetadata
-from .serializer import ResponseMetadata
+from .request_metadata import RequestMetadata
+from .response_metadata import ResponseMetadata
 
 
 @dataclass
