@@ -5,7 +5,7 @@ from favicorn.iconnection import IConnection
 from favicorn.iconnection_factory import IConnectionFactory
 
 from .connection import HTTPConnection
-from .icontroller import IHTTPController
+from .icontroller_factory import IHTTPControllerFactory
 from .parser import HTTPParser
 from .serializer import HTTPSerializer
 
@@ -13,12 +13,12 @@ from .serializer import HTTPSerializer
 class HTTPConnectionFactory(IConnectionFactory):
     def __init__(
         self,
-        controller: IHTTPController,
+        controller_factory: IHTTPControllerFactory,
         parser_factory: Callable[[], HTTPParser],
         serializer_factory: Callable[[], HTTPSerializer],
     ) -> None:
-        self.controller = controller
         self.parser_factory = parser_factory
+        self.controller_factory = controller_factory
         self.serializer_factory = serializer_factory
 
     def build(
@@ -27,7 +27,7 @@ class HTTPConnectionFactory(IConnectionFactory):
         writer: asyncio.StreamWriter,
     ) -> IConnection:
         return HTTPConnection(
-            self.controller,
+            self.controller_factory,
             self.parser_factory,
             self.serializer_factory,
             reader,

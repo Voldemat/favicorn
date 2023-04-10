@@ -8,8 +8,8 @@ from .icontroller import (
     HTTPControllerReceiveEvent,
     HTTPControllerSendBodyEvent,
     HTTPControllerSendMetadataEvent,
-    IHTTPController,
 )
+from .icontroller_factory import IHTTPControllerFactory
 from .parser import HTTPParser
 from .serializer import HTTPSerializer
 
@@ -17,7 +17,7 @@ from .serializer import HTTPSerializer
 class HTTPConnection(IConnection):
     def __init__(
         self,
-        controller: IHTTPController,
+        controller_factory: IHTTPControllerFactory,
         parser_factory: Callable[[], HTTPParser],
         serializer_factory: Callable[[], HTTPSerializer],
         reader: asyncio.StreamReader,
@@ -25,8 +25,8 @@ class HTTPConnection(IConnection):
     ) -> None:
         self.reader = reader
         self.writer = writer
+        self.controller_factory = controller_factory
         self.client = get_remote_addr(writer)
-        self.controller = controller
         self.parser_factory = parser_factory
         self.serializer_factory = serializer_factory
         self.keepalive = True
@@ -42,6 +42,9 @@ class HTTPConnection(IConnection):
             await self.handle_request(data)
 
     async def handle_request(self, data: bytes) -> None:
+        controller = self.controller_factory.build(
+            client=self.client,
+        )
         parser = self.parser_factory()
         serializer = self.serializer_factory()
         parser.feed_data(data)
@@ -52,15 +55,15 @@ class HTTPConnection(IConnection):
             parser.feed_data(data)
 
         metadata = parser.get_metadata()
-        async for event in self.controller.start(metadata, self.client):
+        async for event in controller.start(metadata):
             if isinstance(event, HTTPControllerReceiveEvent):
                 if not parser.has_body():
                     if data := await self.read():
                         parser.feed_data(data)
                     else:
-                        self.controller.disconnect()
+                        controller.disconnect()
                         continue
-                self.controller.receive_body(
+                controller.receive_body(
                     parser.get_body(), parser.is_more_body()
                 )
             elif isinstance(event, HTTPControllerSendMetadataEvent):
@@ -72,7 +75,7 @@ class HTTPConnection(IConnection):
             else:
                 raise ValueError(f"Unhandled event type {type(event)}")
 
-        await self.controller.stop()
+        await controller.stop()
         self.keepalive = not self.writer.is_closing() and parser.is_keepalive()
         if not self.writer.is_closing():
             await self.writer.drain()

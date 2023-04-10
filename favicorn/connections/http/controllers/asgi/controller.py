@@ -18,15 +18,15 @@ from asgiref.typing import (
     HTTPScope,
 )
 
-from ..icontroller import (
+from favicorn.connections.http.icontroller import (
     HTTPControllerEvent,
     HTTPControllerReceiveEvent,
     HTTPControllerSendBodyEvent,
     HTTPControllerSendMetadataEvent,
     IHTTPController,
 )
-from ..parser import RequestMetadata
-from ..serializer import ResponseMetadata
+from favicorn.connections.http.parser import RequestMetadata
+from favicorn.connections.http.serializer import ResponseMetadata
 
 
 class HTTPResponseEvents(enum.Enum):
@@ -44,7 +44,7 @@ class Events:
         self.new = asyncio.Event()
 
 
-class ASGIController(
+class HTTPASGIController(
     IHTTPController, AsyncGenerator[HTTPControllerEvent, None]
 ):
     app: ASGI3Application
@@ -61,10 +61,10 @@ class ASGIController(
     def __init__(
         self,
         app: ASGI3Application,
-        root_path: str,
+        client: tuple[str, int] | None,
     ) -> None:
-        self.root_path = root_path
         self.app = app
+        self.client = client
         self.events = Events()
         self.task = None
         self.body = None
@@ -77,7 +77,8 @@ class ASGIController(
         self.queue = deque()
 
     def start(
-        self, metadata: RequestMetadata, client: tuple[str, int] | None
+        self,
+        metadata: RequestMetadata,
     ) -> AsyncGenerator[HTTPControllerEvent, None]:
         scope = HTTPScope(
             type="http",
@@ -88,9 +89,9 @@ class ASGIController(
             raw_path=metadata.raw_path,
             query_string=metadata.query_string,
             headers=metadata.headers,
-            root_path=self.root_path,
+            root_path="",
             server=None,
-            client=client,
+            client=self.client,
             extensions={},
             method=metadata.method,
         )
@@ -224,3 +225,13 @@ class ASGIController(
     def validate_event_type(self, event_type: str) -> None:
         assert self.expected_event is not None, "Response already ended"
         assert event_type == self.expected_event.value
+
+
+class HTTPASGIControllerFactory:
+    def build(
+        self, app: ASGI3Application, client: tuple[str, int] | None
+    ) -> HTTPASGIController:
+        return HTTPASGIController(
+            app=app,
+            client=client,
+        )

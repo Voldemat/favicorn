@@ -1,3 +1,3 @@
-from .asgi import ASGIController
+from .asgi import HTTPASGIController, HTTPASGIControllerFactory
 
-__all__ = ("ASGIController",)
+__all__ = ("HTTPASGIController", "HTTPASGIControllerFactory")

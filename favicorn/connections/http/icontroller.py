@@ -33,7 +33,6 @@ class IHTTPController(ABC):
     def start(
         self,
         metadata: RequestMetadata,
-        client: tuple[str, int] | None,
     ) -> AsyncGenerator[HTTPControllerEvent, None]:
         raise NotImplementedError
 
