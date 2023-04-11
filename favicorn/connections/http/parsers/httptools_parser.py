@@ -38,6 +38,7 @@ class HTTPParserState:
             path=url.path.decode(),
             query_string=url.query,
             http_version=self.http_version,
+            is_keepalive=self.is_keepalive(),
         )
 
     def add_header(self, name: bytes, value: bytes) -> None:

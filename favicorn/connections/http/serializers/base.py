@@ -9,31 +9,17 @@ from ..response_metadata import ResponseMetadata
 
 
 class BaseHTTPSerializer(IHTTPSerializer):
-    data: bytes
-
-    def __init__(self) -> None:
-        self.data = b""
-
-    def get_data(self) -> bytes:
-        data = self.data
-        self.data = b""
-        return data
-
-    def receive_metadata(
+    def serialize_metadata(
         self,
         metadata: ResponseMetadata,
-    ) -> None:
-        message = (
+    ) -> bytes:
+        return (
             self.build_first_line(metadata.status)
             + self.encode_headers(
                 itertools.chain(self.get_default_headers(), metadata.headers)
             )
             + b"\r\n"
         )
-        self.add_data(message)
-
-    def add_data(self, data: bytes) -> None:
-        self.data += data
 
     @staticmethod
     def build_first_line(status_code: int) -> bytes:
@@ -47,8 +33,8 @@ class BaseHTTPSerializer(IHTTPSerializer):
             (b"Server", b"favicorn"),
         )
 
-    def receive_body(self, body: bytes) -> None:
-        self.add_data(body)
+    def serialize_body(self, body: bytes) -> bytes:
+        return body
 
     def encode_headers(self, headers: Iterable[tuple[bytes, bytes]]) -> bytes:
         return b"".join(map(lambda h: h[0] + b": " + h[1] + b"\r\n", headers))

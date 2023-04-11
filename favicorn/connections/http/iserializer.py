@@ -5,16 +5,12 @@ from .response_metadata import ResponseMetadata
 
 class IHTTPSerializer(ABC):
     @abstractmethod
-    def receive_metadata(
+    def serialize_metadata(
         self,
         metadata: ResponseMetadata,
-    ) -> None:
+    ) -> bytes:
         raise NotImplementedError
 
     @abstractmethod
-    def receive_body(self, body: bytes) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_data(self) -> bytes:
+    def serialize_body(self, body: bytes) -> bytes:
         raise NotImplementedError

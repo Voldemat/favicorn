@@ -55,6 +55,7 @@ class HTTPConnection(IConnection):
             parser.feed_data(data)
 
         metadata = parser.get_metadata()
+        self.keepalive = metadata.is_keepalive
         async for event in controller.start(metadata):
             if isinstance(event, HTTPControllerReceiveEvent):
                 if not parser.has_body():
@@ -67,18 +68,17 @@ class HTTPConnection(IConnection):
                     parser.get_body(), parser.is_more_body()
                 )
             elif isinstance(event, HTTPControllerSendMetadataEvent):
-                serializer.receive_metadata(event.metadata)
-                self.write(serializer.get_data())
+                self.write(serializer.serialize_metadata(event.metadata))
             elif isinstance(event, HTTPControllerSendBodyEvent):
-                serializer.receive_body(event.body)
-                self.write(serializer.get_data())
+                self.write(serializer.serialize_body(event.body))
             else:
                 raise ValueError(f"Unhandled event type {type(event)}")
 
         await controller.stop()
-        self.keepalive = not self.writer.is_closing() and parser.is_keepalive()
-        if not self.writer.is_closing():
-            await self.writer.drain()
+        if self.writer.is_closing():
+            self.keepalive = False
+            return
+        await self.writer.drain()
 
     @overload
     async def read(self, timeout: None = None) -> bytes:
@@ -103,7 +103,8 @@ class HTTPConnection(IConnection):
         return data
 
     def write(self, data: bytes) -> None:
-        self.writer.write(data)
+        if not self.writer.is_closing():
+            self.writer.write(data)
 
     async def close(self) -> None:
         if self.writer.is_closing():
