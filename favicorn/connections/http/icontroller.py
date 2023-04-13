@@ -2,9 +2,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import AsyncGenerator
 
-from .request_metadata import RequestMetadata
-from .response_metadata import ResponseMetadata
-
 
 @dataclass
 class HTTPControllerReceiveEvent:
@@ -12,27 +9,18 @@ class HTTPControllerReceiveEvent:
 
 
 @dataclass
-class HTTPControllerSendMetadataEvent:
-    metadata: ResponseMetadata
+class HTTPControllerSendEvent:
+    data: bytes
 
 
-@dataclass
-class HTTPControllerSendBodyEvent:
-    body: bytes
-
-
-HTTPControllerEvent = (
-    HTTPControllerReceiveEvent
-    | HTTPControllerSendMetadataEvent
-    | HTTPControllerSendBodyEvent
-)
+HTTPControllerEvent = HTTPControllerReceiveEvent | HTTPControllerSendEvent
 
 
 class IHTTPController(ABC):
     @abstractmethod
-    def start(
+    async def start(
         self,
-        metadata: RequestMetadata,
+        initial_data: bytes | None,
     ) -> AsyncGenerator[HTTPControllerEvent, None]:
         raise NotImplementedError
 
@@ -41,9 +29,9 @@ class IHTTPController(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def receive_body(self, body: bytes, more_body: bool) -> None:
+    def receive_data(self, data: bytes | None) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def disconnect(self) -> None:
+    def is_keepalive(self) -> bool:
         raise NotImplementedError

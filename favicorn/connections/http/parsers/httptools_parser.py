@@ -113,6 +113,3 @@ class HTTPToolsParser(IHTTPParser):
 
     def feed_data(self, data: bytes) -> None:
         self.parser.feed_data(data)
-
-    def reset(self) -> None:
-        self.state = HTTPParserState()

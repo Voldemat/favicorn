@@ -40,9 +40,11 @@ def serving_app(
         s = Favicorn(
             connection_manager=ConnectionManager(
                 connection_factory=HTTPConnectionFactory(
-                    controller_factory=HTTPASGIControllerFactory(app),
-                    parser_factory=HTTPToolsParser,
-                    serializer_factory=BaseHTTPSerializer,
+                    controller_factory=HTTPASGIControllerFactory(
+                        app,
+                        parser_factory=HTTPToolsParser,
+                        serializer_factory=BaseHTTPSerializer,
+                    ),
                 )
             ),
             socket_provider=InetSocketProvider(

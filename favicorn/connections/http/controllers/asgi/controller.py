@@ -21,10 +21,11 @@ from asgiref.typing import (
 from favicorn.connections.http.icontroller import (
     HTTPControllerEvent,
     HTTPControllerReceiveEvent,
-    HTTPControllerSendBodyEvent,
-    HTTPControllerSendMetadataEvent,
+    HTTPControllerSendEvent,
     IHTTPController,
 )
+from favicorn.connections.http.iparser import IHTTPParser
+from favicorn.connections.http.iserializer import IHTTPSerializer
 from favicorn.connections.http.request_metadata import RequestMetadata
 from favicorn.connections.http.response_metadata import ResponseMetadata
 
@@ -36,11 +37,11 @@ class HTTPResponseEvents(enum.Enum):
 
 
 class Events:
-    body: asyncio.Event
+    receive: asyncio.Event
     new: asyncio.Event
 
     def __init__(self) -> None:
-        self.body = asyncio.Event()
+        self.receive = asyncio.Event()
         self.new = asyncio.Event()
 
 
@@ -51,7 +52,7 @@ class HTTPASGIController(
     events: Events
     queue: deque[HTTPControllerEvent]
     task: asyncio.Task[Any] | None
-    body: bytes | None
+    receive_buffer: bytes | None
     more_body: bool
     response_metadata: ResponseMetadata | None
     expected_event: HTTPResponseEvents | None
@@ -61,13 +62,18 @@ class HTTPASGIController(
     def __init__(
         self,
         app: ASGI3Application,
+        parser: IHTTPParser,
+        serializer: IHTTPSerializer,
         client: tuple[str, int] | None,
     ) -> None:
         self.app = app
+        self.parser = parser
+        self.serializer = serializer
         self.client = client
         self.events = Events()
         self.task = None
         self.body = None
+        self.receive_buffer = b""
         self.more_body = True
         self.expected_event = HTTPResponseEvents.START
         self.response_metadata = None
@@ -76,10 +82,13 @@ class HTTPASGIController(
         self.response_more_body = True
         self.queue = deque()
 
-    def start(
+    async def start(
         self,
-        metadata: RequestMetadata,
+        initial_data: bytes | None,
     ) -> AsyncGenerator[HTTPControllerEvent, None]:
+        metadata = await self.wait_for_metadata(initial_data)
+        if metadata is None:
+            return self
         scope = HTTPScope(
             type="http",
             scheme="http",
@@ -97,6 +106,24 @@ class HTTPASGIController(
         )
         self.task = asyncio.create_task(self.main(scope))
         return self
+
+    async def wait_for_metadata(
+        self, initial_data: bytes | None
+    ) -> RequestMetadata | None:
+        if initial_data is not None:
+            self.parser.feed_data(initial_data)
+        while not self.parser.is_metadata_ready():
+            data = await self.receive_from_connection()
+            if data is None:
+                return None
+            self.parser.feed_data(data)
+        return self.parser.get_metadata()
+
+    async def receive_from_connection(self) -> bytes | None:
+        self.dispatch_event(HTTPControllerReceiveEvent())
+        await self.events.receive.wait()
+        self.events.receive.clear()
+        return self.receive_buffer
 
     async def stop(self) -> None:
         if self.task is None or self.task.done():
@@ -120,7 +147,8 @@ class HTTPASGIController(
         return await super().athrow(*args, **kwargs)
 
     async def get_event(self) -> HTTPControllerEvent | None:
-        assert self.task is not None, "Application didn`t started yet"
+        if self.task is None:
+            return None
         await self.events.new.wait()
         if len(self.queue) != 0:
             return self.queue.popleft()
@@ -140,26 +168,21 @@ class HTTPASGIController(
             print("UnhandledError: ", unhandled_error.__repr__())
             await self.send_500_response()
 
-    def receive_body(self, body: bytes, more_body: bool) -> None:
-        self.body = body
-        self.more_body = more_body
-        self.events.body.set()
-
-    def disconnect(self) -> None:
-        self.body = None
-        self.more_body = False
-        self.events.body.set()
+    def receive_data(self, data: bytes | None) -> None:
+        self.receive_buffer = data
+        self.events.receive.set()
 
     async def receive(self) -> ASGIReceiveEvent:
-        self.dispatch_event(HTTPControllerReceiveEvent())
-        await self.events.body.wait()
-        self.events.body.clear()
-        if self.body is None:
+        if not self.parser.has_body():
+            if data := await self.receive_from_connection():
+                self.parser.feed_data(data)
+        data = self.parser.get_body()
+        if data is None:
             return HTTPDisconnectEvent(type="http.disconnect")
         return HTTPRequestEvent(
             type="http.request",
-            body=self.body,
-            more_body=self.more_body,
+            body=data,
+            more_body=self.parser.is_more_body(),
         )
 
     async def send_500_response(self) -> None:
@@ -168,15 +191,13 @@ class HTTPASGIController(
             (b"Content-Type", b"text/plain; charset=utf-8"),
             (b"Content-Length", str(len(content)).encode()),
         )
-        self.dispatch_event(
-            HTTPControllerSendMetadataEvent(
-                metadata=ResponseMetadata(
-                    status=500,
-                    headers=headers,
-                ),
+        data = self.serializer.serialize_metadata(
+            ResponseMetadata(
+                status=500,
+                headers=headers,
             )
-        )
-        self.dispatch_event(HTTPControllerSendBodyEvent(body=content))
+        ) + self.serializer.serialize_body(content)
+        self.dispatch_event(HTTPControllerSendEvent(data))
 
     async def send(self, event: ASGISendEvent) -> None:
         self.validate_event_type(event["type"])
@@ -193,8 +214,10 @@ class HTTPASGIController(
                 else:
                     self.expected_event = HTTPResponseEvents.BODY
                     self.dispatch_event(
-                        HTTPControllerSendMetadataEvent(
-                            metadata=self.response_metadata,
+                        HTTPControllerSendEvent(
+                            self.serializer.serialize_metadata(
+                                self.response_metadata
+                            ),
                         )
                     )
             case HTTPResponseEvents.TRAILERS:
@@ -207,15 +230,19 @@ class HTTPASGIController(
                 if more_trailers is False:
                     self.expected_event = HTTPResponseEvents.BODY
                     self.dispatch_event(
-                        HTTPControllerSendMetadataEvent(
-                            metadata=self.response_metadata,
+                        HTTPControllerSendEvent(
+                            data=self.serializer.serialize_metadata(
+                                self.response_metadata
+                            ),
                         )
                     )
             case HTTPResponseEvents.BODY:
                 event = cast(HTTPResponseBodyEvent, event)
                 more_body = event.get("more_body", False)
                 self.dispatch_event(
-                    HTTPControllerSendBodyEvent(body=event["body"])
+                    HTTPControllerSendEvent(
+                        self.serializer.serialize_body(event["body"])
+                    )
                 )
                 if more_body is False:
                     self.expected_event = None
@@ -226,12 +253,5 @@ class HTTPASGIController(
         assert self.expected_event is not None, "Response already ended"
         assert event_type == self.expected_event.value
 
-
-class HTTPASGIControllerFactory:
-    def build(
-        self, app: ASGI3Application, client: tuple[str, int] | None
-    ) -> HTTPASGIController:
-        return HTTPASGIController(
-            app=app,
-            client=client,
-        )
+    def is_keepalive(self) -> bool:
+        return self.parser.is_keepalive()

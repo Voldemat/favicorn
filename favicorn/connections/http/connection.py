@@ -1,25 +1,20 @@
 import asyncio
-from typing import Callable, overload
+from typing import overload
 
 from favicorn.iconnection import IConnection
 from favicorn.utils import get_remote_addr
 
 from .icontroller import (
     HTTPControllerReceiveEvent,
-    HTTPControllerSendBodyEvent,
-    HTTPControllerSendMetadataEvent,
+    HTTPControllerSendEvent,
 )
 from .icontroller_factory import IHTTPControllerFactory
-from .iparser import IHTTPParser
-from .iserializer import IHTTPSerializer
 
 
 class HTTPConnection(IConnection):
     def __init__(
         self,
         controller_factory: IHTTPControllerFactory,
-        parser_factory: Callable[[], IHTTPParser],
-        serializer_factory: Callable[[], IHTTPSerializer],
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
     ) -> None:
@@ -27,8 +22,6 @@ class HTTPConnection(IConnection):
         self.writer = writer
         self.controller_factory = controller_factory
         self.client = get_remote_addr(writer)
-        self.parser_factory = parser_factory
-        self.serializer_factory = serializer_factory
         self.keepalive = True
 
     async def init(self) -> None:
@@ -36,49 +29,26 @@ class HTTPConnection(IConnection):
 
     async def main(self) -> None:
         while self.keepalive:
-            data = await self.read(timeout=5)
-            if data is None:
-                break
-            await self.handle_request(data)
+            if data := await self.read(timeout=5):
+                await self.handle_request(data)
+            else:
+                self.keepalive = False
 
     async def handle_request(self, data: bytes) -> None:
-        controller = self.controller_factory.build(
-            client=self.client,
-        )
-        parser = self.parser_factory()
-        serializer = self.serializer_factory()
-        parser.feed_data(data)
-        while not parser.is_metadata_ready():
-            data = await self.read()
-            if data is None:
-                return
-            parser.feed_data(data)
-
-        metadata = parser.get_metadata()
-        self.keepalive = metadata.is_keepalive
-        async for event in controller.start(metadata):
+        controller = self.controller_factory.build(client=self.client)
+        async for event in await controller.start(initial_data=data):
             if isinstance(event, HTTPControllerReceiveEvent):
-                if not parser.has_body():
-                    if data := await self.read():
-                        parser.feed_data(data)
-                    else:
-                        controller.disconnect()
-                        continue
-                controller.receive_body(
-                    parser.get_body(), parser.is_more_body()
-                )
-            elif isinstance(event, HTTPControllerSendMetadataEvent):
-                self.write(serializer.serialize_metadata(event.metadata))
-            elif isinstance(event, HTTPControllerSendBodyEvent):
-                self.write(serializer.serialize_body(event.body))
+                data = await self.read()
+                controller.receive_data(data)
+            elif isinstance(event, HTTPControllerSendEvent):
+                self.writer.write(event.data)
             else:
                 raise ValueError(f"Unhandled event type {type(event)}")
-
-        await controller.stop()
-        if self.writer.is_closing():
-            self.keepalive = False
-            return
-        await self.writer.drain()
+        self.keepalive = (
+            not self.writer.is_closing() and controller.is_keepalive()
+        )
+        if not self.writer.is_closing():
+            await self.writer.drain()
 
     @overload
     async def read(self, timeout: None = None) -> bytes:
