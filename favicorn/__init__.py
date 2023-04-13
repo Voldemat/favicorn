@@ -1,4 +1,3 @@
-from .connection_manager import ConnectionManager
 from .connections import (
     BaseHTTPSerializer,
     HTTPASGIController,
@@ -8,7 +7,6 @@ from .connections import (
     HTTPToolsParser,
 )
 from .iconnection_factory import IConnectionFactory
-from .iconnection_manager import IConnectionManager
 from .isocket_provider import ISocketProvider
 from .server import Server as Favicorn
 from .socket_providers import InetSocketProvider, UnixSocketProvider

@@ -1,25 +1,27 @@
 import asyncio
 
-from .iconnection_manager import IConnectionManager
+from .connection_manager import ConnectionManager
+from .iconnection_factory import IConnectionFactory
 from .isocket_provider import ISocketProvider
 
 
 class Server:
     socket_provider: ISocketProvider
-    connection_manager: IConnectionManager
+    connection_factory: IConnectionFactory
 
     def __init__(
         self,
         socket_provider: ISocketProvider,
-        connection_manager: IConnectionManager,
+        connection_factory: IConnectionFactory,
     ) -> None:
         self.socket_provider = socket_provider
-        self.connection_manager = connection_manager
+        self.connection_factory = connection_factory
 
     async def init(self) -> None:
         sock = self.socket_provider.acquire()
+        manager = ConnectionManager(self.connection_factory)
         self._server = await asyncio.start_server(
-            self.connection_manager.handler,
+            manager.handler,
             sock=sock,
             start_serving=False,
         )

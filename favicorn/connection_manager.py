@@ -1,10 +1,9 @@
 import asyncio
 
 from .iconnection_factory import IConnectionFactory
-from .iconnection_manager import IConnectionManager
 
 
-class ConnectionManager(IConnectionManager):
+class ConnectionManager:
     def __init__(
         self,
         connection_factory: IConnectionFactory,
