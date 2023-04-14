@@ -32,7 +32,7 @@ class HTTPParserState:
         assert self.http_version is not None
         url = httptools.parse_url(self.raw_url)
         return RequestMetadata(
-            raw_path=self.raw_url,
+            raw_path=url.path,
             method=self.method,
             headers=self.headers,
             path=url.path.decode(),

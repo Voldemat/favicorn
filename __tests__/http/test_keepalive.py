@@ -2,7 +2,7 @@ import asyncio
 
 from asgiref.typing import ASGIReceiveCallable, ASGISendCallable, HTTPScope
 
-from .conftest import serving_app
+from ..conftest import serving_app
 
 
 async def app(

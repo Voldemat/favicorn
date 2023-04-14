@@ -8,6 +8,6 @@ class RequestMetadata:
     method: str
     raw_path: bytes
     http_version: str
-    query_string: bytes
     is_keepalive: bool
+    query_string: bytes | None
     headers: Iterable[tuple[bytes, bytes]]

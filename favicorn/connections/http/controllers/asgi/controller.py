@@ -38,11 +38,11 @@ class HTTPResponseEvents(enum.Enum):
 
 class Events:
     receive: asyncio.Event
-    new: asyncio.Event
+    send: asyncio.Event
 
     def __init__(self) -> None:
         self.receive = asyncio.Event()
-        self.new = asyncio.Event()
+        self.send = asyncio.Event()
 
 
 class HTTPASGIController(
@@ -96,7 +96,7 @@ class HTTPASGIController(
             asgi=ASGIVersions(spec_version="2.3", version="3.0"),
             http_version=metadata.http_version,
             raw_path=metadata.raw_path,
-            query_string=metadata.query_string,
+            query_string=metadata.query_string or b"",
             headers=metadata.headers,
             root_path="",
             server=None,
@@ -149,17 +149,17 @@ class HTTPASGIController(
     async def get_event(self) -> HTTPControllerEvent | None:
         if self.task is None:
             return None
-        await self.events.new.wait()
+        await self.events.send.wait()
         if len(self.queue) != 0:
             return self.queue.popleft()
-        self.events.new.clear()
+        self.events.send.clear()
         if self.task.done():
             return None
         return await self.get_event()
 
     def dispatch_event(self, event: HTTPControllerEvent) -> None:
         self.queue.append(event)
-        self.events.new.set()
+        self.events.send.set()
 
     async def main(self, scope: HTTPScope) -> None:
         try:
