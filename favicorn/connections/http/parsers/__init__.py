@@ -1,3 +1,3 @@
-from .httptools_parser import HTTPToolsParser
+from .httptools_parser import HTTPToolsParser, HTTPToolsParserFactory
 
-__all__ = ("HTTPToolsParser",)
+__all__ = ("HTTPToolsParser", "HTTPToolsParserFactory")

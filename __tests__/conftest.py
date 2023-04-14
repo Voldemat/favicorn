@@ -8,9 +8,11 @@ from favicorn import (
     Favicorn,
     HTTPASGIControllerFactory,
     HTTPConnectionFactory,
-    HTTPToolsParser,
+    HTTPToolsParserFactory,
     InetSocketProvider,
 )
+
+import httptools
 
 
 @contextmanager
@@ -40,7 +42,7 @@ def serving_app(
             connection_factory=HTTPConnectionFactory(
                 controller_factory=HTTPASGIControllerFactory(
                     app,
-                    parser_factory=HTTPToolsParser,
+                    parser_factory=HTTPToolsParserFactory(httptools),
                     serializer_factory=BaseHTTPSerializer,
                 ),
             ),

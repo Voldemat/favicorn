@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
+from types import ModuleType
+from typing import Any
 
-import httptools
-
-from ..iparser import IHTTPParser
-from ..request_metadata import RequestMetadata
+from favicorn.connections.http.iparser import IHTTPParser
+from favicorn.connections.http.request_metadata import RequestMetadata
 
 
 @dataclass
@@ -26,7 +26,7 @@ class HTTPParserState:
             and self.http_version is not None
         )
 
-    def get_metadata(self) -> RequestMetadata:
+    def get_metadata(self, httptools: ModuleType) -> RequestMetadata:
         assert self.raw_url is not None
         assert self.method is not None
         assert self.http_version is not None
@@ -53,20 +53,17 @@ class HTTPParserState:
 
 
 class HTTPToolsParser(IHTTPParser):
+    httptools: ModuleType
     state: HTTPParserState
-    parser: httptools.HttpRequestParser
+    parser: Any
 
-    def __init__(self) -> None:
+    def __init__(self, httptools: ModuleType) -> None:
+        self.httptools = httptools
         self.parser = httptools.HttpRequestParser(self)
         self.state = HTTPParserState()
         self.body_event = asyncio.Event()
         self.headers_event = asyncio.Event()
-        self.message_start_event = asyncio.Event()
         self.disconnected = False
-
-    def on_message_begin(self) -> None:
-        self.state = HTTPParserState()
-        self.message_start_event.set()
 
     def on_url(self, url: bytes) -> None:
         self.state.raw_url = url
@@ -103,7 +100,7 @@ class HTTPToolsParser(IHTTPParser):
         return self.state.is_metadata_ready()
 
     def get_metadata(self) -> RequestMetadata:
-        return self.state.get_metadata()
+        return self.state.get_metadata(self.httptools)
 
     def is_keepalive(self) -> bool:
         return self.state.is_keepalive()

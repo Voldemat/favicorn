@@ -1,6 +1,4 @@
-from typing import Callable
-
-from favicorn.connections.http.iparser import IHTTPParser
+from favicorn.connections.http.iparser_factory import IHTTPParserFactory
 
 import pytest
 
@@ -15,10 +13,10 @@ from .conftest import (
 @pytest.mark.parametrize("parser_factory", parser_factories)
 @pytest.mark.parametrize("t_request", test_requests)
 async def test_parse_request(
-    parser_factory: Callable[[], IHTTPParser],
+    parser_factory: IHTTPParserFactory,
     t_request: TestRequest,
 ) -> None:
-    parser = parser_factory()
+    parser = parser_factory.build()
     parser.feed_data(t_request.request_bytes)
     assert parser.is_metadata_ready()
     metadata = parser.get_metadata()

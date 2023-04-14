@@ -5,6 +5,7 @@ from .connections import (
     HTTPConnection,
     HTTPConnectionFactory,
     HTTPToolsParser,
+    HTTPToolsParserFactory,
 )
 from .iconnection_factory import IConnectionFactory
 from .isocket_provider import ISocketProvider
@@ -25,4 +26,5 @@ __all__ = (
     "HTTPConnection",
     "HTTPASGIController",
     "HTTPASGIControllerFactory",
+    "HTTPToolsParserFactory",
 )

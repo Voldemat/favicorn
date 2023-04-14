@@ -1,12 +1,15 @@
 from dataclasses import dataclass
-from typing import Callable
 
-from favicorn.connections.http.iparser import IHTTPParser
-from favicorn.connections.http.parsers import HTTPToolsParser
+from favicorn.connections.http.iparser_factory import IHTTPParserFactory
+from favicorn.connections.http.parsers import HTTPToolsParserFactory
 from favicorn.connections.http.request_metadata import RequestMetadata
 
+import httptools
 
-parser_factories: list[Callable[[], IHTTPParser]] = [HTTPToolsParser]
+
+parser_factories: list[IHTTPParserFactory] = [
+    HTTPToolsParserFactory(httptools)
+]
 
 
 @dataclass
