@@ -38,7 +38,7 @@ class HTTPConnection(IConnection):
         controller = self.controller_factory.build(client=self.client)
         async for event in await controller.start(initial_data=data):
             if isinstance(event, HTTPControllerReceiveEvent):
-                data = await self.read()
+                data = await self.read(count=event.count)
                 controller.receive_data(data)
             elif isinstance(event, HTTPControllerSendEvent):
                 self.writer.write(event.data)
@@ -51,23 +51,33 @@ class HTTPConnection(IConnection):
             await self.writer.drain()
 
     @overload
-    async def read(self, timeout: None = None) -> bytes:
+    async def read(
+        self, timeout: None = None, count: int | None = None
+    ) -> bytes:
         ...
 
     @overload
-    async def read(self, timeout: int) -> bytes | None:
+    async def read(
+        self, timeout: int, count: int | None = None
+    ) -> bytes | None:
         ...
 
-    async def read(self, timeout: int | None = None) -> bytes | None:
+    async def read(
+        self, timeout: int | None = None, count: int | None = None
+    ) -> bytes | None:
         if timeout is None:
-            return await self._read()
+            return await self._read(count=count)
         try:
-            return await asyncio.wait_for(self._read(), timeout=timeout)
+            return await asyncio.wait_for(
+                self._read(count=count), timeout=timeout
+            )
         except asyncio.TimeoutError:
             return None
 
-    async def _read(self) -> bytes | None:
-        data = await self.reader.read(4028)
+    async def _read(self, count: int | None = None) -> bytes | None:
+        if count is None:
+            count = 4028
+        data = await self.reader.read(count)
         if self.reader.at_eof():
             return None
         return data

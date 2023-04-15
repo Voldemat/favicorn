@@ -5,7 +5,7 @@ from typing import AsyncGenerator
 
 @dataclass
 class HTTPControllerReceiveEvent:
-    pass
+    count: int | None = None
 
 
 @dataclass
