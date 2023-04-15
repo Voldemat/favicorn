@@ -5,11 +5,7 @@ from .request_metadata import RequestMetadata
 
 class IHTTPParser(ABC):
     @abstractmethod
-    def has_body(self) -> bool:
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_body(self) -> bytes:
+    def feed_data(self, data: bytes) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -21,7 +17,11 @@ class IHTTPParser(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def is_keepalive(self) -> bool:
+    def has_body(self) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_body(self) -> bytes:
         raise NotImplementedError
 
     @abstractmethod
@@ -29,5 +29,5 @@ class IHTTPParser(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def feed_data(self, data: bytes) -> None:
+    def is_keepalive(self) -> bool:
         raise NotImplementedError

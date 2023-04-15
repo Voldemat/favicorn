@@ -25,13 +25,13 @@ class IHTTPController(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def stop(self) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
     def receive_data(self, data: bytes | None) -> None:
         raise NotImplementedError
 
     @abstractmethod
     def is_keepalive(self) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def stop(self) -> None:
         raise NotImplementedError

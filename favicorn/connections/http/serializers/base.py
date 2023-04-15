@@ -15,6 +15,7 @@ class BaseHTTPSerializer(IHTTPSerializer):
     ) -> bytes:
         return (
             self.build_first_line(metadata.status)
+            + b"\r\n"
             + self.encode_headers(
                 itertools.chain(self.get_default_headers(), metadata.headers)
             )
@@ -24,7 +25,7 @@ class BaseHTTPSerializer(IHTTPSerializer):
     @staticmethod
     def build_first_line(status_code: int) -> bytes:
         status_text = HTTPStatus(status_code).phrase
-        return f"HTTP/1.1 {status_code} {status_text}\n".encode()
+        return f"HTTP/1.1 {status_code} {status_text}".encode()
 
     @staticmethod
     def get_default_headers() -> Iterable[tuple[bytes, bytes]]:

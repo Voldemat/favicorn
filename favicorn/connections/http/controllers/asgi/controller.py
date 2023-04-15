@@ -30,7 +30,7 @@ from favicorn.connections.http.request_metadata import RequestMetadata
 from favicorn.connections.http.response_metadata import ResponseMetadata
 
 
-class HTTPResponseEvents(enum.Enum):
+class ASGIResponseEvents(enum.Enum):
     START = "http.response.start"
     TRAILERS = "http.response.trailers"
     BODY = "http.response.body"
@@ -55,7 +55,7 @@ class HTTPASGIController(
     receive_buffer: bytes | None
     more_body: bool
     response_metadata: ResponseMetadata | None
-    expected_event: HTTPResponseEvents | None
+    expected_event: ASGIResponseEvents | None
     response_body: bytes | None
     response_more_body: bool
 
@@ -75,7 +75,7 @@ class HTTPASGIController(
         self.body = None
         self.receive_buffer = b""
         self.more_body = True
-        self.expected_event = HTTPResponseEvents.START
+        self.expected_event = ASGIResponseEvents.START
         self.response_metadata = None
         self.more_headers = True
         self.response_body = None
@@ -201,8 +201,8 @@ class HTTPASGIController(
 
     async def send(self, event: ASGISendEvent) -> None:
         self.validate_event_type(event["type"])
-        match HTTPResponseEvents(event["type"]):
-            case HTTPResponseEvents.START:
+        match ASGIResponseEvents(event["type"]):
+            case ASGIResponseEvents.START:
                 event = cast(HTTPResponseStartEvent, event)
                 self.response_metadata = ResponseMetadata(
                     status=event["status"],
@@ -210,9 +210,9 @@ class HTTPASGIController(
                 )
                 trailers = event.get("trailers", False)
                 if trailers is True:
-                    self.expected_event = HTTPResponseEvents.TRAILERS
+                    self.expected_event = ASGIResponseEvents.TRAILERS
                 else:
-                    self.expected_event = HTTPResponseEvents.BODY
+                    self.expected_event = ASGIResponseEvents.BODY
                     self.dispatch_event(
                         HTTPControllerSendEvent(
                             self.serializer.serialize_metadata(
@@ -220,7 +220,7 @@ class HTTPASGIController(
                             ),
                         )
                     )
-            case HTTPResponseEvents.TRAILERS:
+            case ASGIResponseEvents.TRAILERS:
                 assert (
                     self.response_metadata is not None
                 ), "ResponseMetadata is not defined yet"
@@ -228,7 +228,7 @@ class HTTPASGIController(
                 more_trailers = event.get("more_trailers", False)
                 self.response_metadata.add_extra_headers(event["headers"])
                 if more_trailers is False:
-                    self.expected_event = HTTPResponseEvents.BODY
+                    self.expected_event = ASGIResponseEvents.BODY
                     self.dispatch_event(
                         HTTPControllerSendEvent(
                             data=self.serializer.serialize_metadata(
@@ -236,7 +236,7 @@ class HTTPASGIController(
                             ),
                         )
                     )
-            case HTTPResponseEvents.BODY:
+            case ASGIResponseEvents.BODY:
                 event = cast(HTTPResponseBodyEvent, event)
                 more_body = event.get("more_body", False)
                 self.dispatch_event(
