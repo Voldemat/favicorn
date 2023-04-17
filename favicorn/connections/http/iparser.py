@@ -3,6 +3,10 @@ from abc import ABC, abstractmethod
 from .request_metadata import RequestMetadata
 
 
+class HTTPParsingException(BaseException):
+    pass
+
+
 class IHTTPParser(ABC):
     @abstractmethod
     def feed_data(self, data: bytes) -> None:
@@ -14,6 +18,14 @@ class IHTTPParser(ABC):
 
     @abstractmethod
     def get_metadata(self) -> RequestMetadata:
+        raise NotImplementedError
+
+    @abstractmethod
+    def has_error(self) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_error(self) -> HTTPParsingException:
         raise NotImplementedError
 
     @abstractmethod

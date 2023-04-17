@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from types import ModuleType
 from typing import Any
 
-from favicorn.connections.http.iparser import IHTTPParser
+from favicorn.connections.http.iparser import HTTPParsingException, IHTTPParser
 from favicorn.connections.http.request_metadata import RequestMetadata
 
 
@@ -42,7 +42,9 @@ class HTTPParserState:
         )
 
     def add_header(self, name: bytes, value: bytes) -> None:
-        self.headers.append((name, value))
+        self.headers.append(
+            (name.decode().lower().encode(), value.decode().lower().encode())
+        )
         if name.decode().lower() == "connection":
             self.request_connection_close = value.decode().lower() == "close"
 
@@ -56,6 +58,7 @@ class HTTPToolsParser(IHTTPParser):
     httptools: ModuleType
     state: HTTPParserState
     parser: Any
+    error: HTTPParsingException | None
 
     def __init__(self, httptools: ModuleType) -> None:
         self.httptools = httptools
@@ -64,6 +67,7 @@ class HTTPToolsParser(IHTTPParser):
         self.body_event = asyncio.Event()
         self.headers_event = asyncio.Event()
         self.disconnected = False
+        self.error = None
 
     def on_url(self, url: bytes) -> None:
         self.state.raw_url = url
@@ -85,6 +89,13 @@ class HTTPToolsParser(IHTTPParser):
             self.state.body = b""
         self.state.more_body = False
         self.body_event.set()
+
+    def has_error(self) -> bool:
+        return self.error is not None
+
+    def get_error(self) -> HTTPParsingException:
+        assert self.error is not None
+        return self.error
 
     def has_body(self) -> bool:
         return self.body_event.is_set() and self.state.body is not None

@@ -1,14 +1,20 @@
 from dataclasses import dataclass
 
 from favicorn.connections.http.iparser import IHTTPParserFactory
-from favicorn.connections.http.parsers import HTTPToolsParserFactory
+from favicorn.connections.http.parsers import (
+    H11HTTPParserFactory,
+    HTTPToolsParserFactory,
+)
 from favicorn.connections.http.request_metadata import RequestMetadata
+
+import h11
 
 import httptools
 
 
 parser_factories: list[IHTTPParserFactory] = [
-    HTTPToolsParserFactory(httptools)
+    HTTPToolsParserFactory(httptools),
+    H11HTTPParserFactory(h11),
 ]
 
 
@@ -36,7 +42,9 @@ def assert_metadata_equals(
 test_requests = [
     TestRequest(
         request_bytes=(
-            b"GET / HTTP/1.1\r\n" b"Accept: application/json\r\n\r\n"
+            b"GET / HTTP/1.1\r\n"
+            b"Host: localhost\r\n"
+            b"Accept: application/json\r\n\r\n"
         ),
         expected_metadata=RequestMetadata(
             path="/",
@@ -45,7 +53,10 @@ test_requests = [
             raw_path=b"/",
             query_string=None,
             is_keepalive=True,
-            headers=((b"Accept", b"application/json"),),
+            headers=(
+                (b"host", b"localhost"),
+                (b"accept", b"application/json"),
+            ),
         ),
         expected_body=b"",
     ),
@@ -61,7 +72,7 @@ test_requests = [
             raw_path=b"/animals/dogs/1",
             query_string=b"sortBy=createdAt",
             is_keepalive=False,
-            headers=((b"Accept", b"application/pdf"),),
+            headers=((b"accept", b"application/pdf"),),
         ),
         expected_body=b"",
     ),
@@ -76,12 +87,16 @@ test_requests = [
             raw_path=b"/pets/cats/2",
             query_string=None,
             is_keepalive=True,
-            headers=((b"Connection", b"keep-alive"),),
+            headers=((b"connection", b"keep-alive"),),
         ),
         expected_body=b"",
     ),
     TestRequest(
-        request_bytes=(b"GET / HTTP/1.1\r\n" b"Connection: close\r\n\r\n"),
+        request_bytes=(
+            b"GET / HTTP/1.1\r\n"
+            b"Host: localhost\r\n"
+            b"Connection: close\r\n\r\n"
+        ),
         expected_metadata=RequestMetadata(
             path="/",
             method="GET",
@@ -89,13 +104,17 @@ test_requests = [
             raw_path=b"/",
             query_string=None,
             is_keepalive=False,
-            headers=((b"Connection", b"close"),),
+            headers=(
+                (b"host", b"localhost"),
+                (b"connection", b"close"),
+            ),
         ),
         expected_body=b"",
     ),
     TestRequest(
         request_bytes=(
             b"POST /data/ HTTP/1.1\r\n"
+            b"Host: localhost\r\n"
             b"Content-Length: 33\r\n"
             b"Content-Type: application/json\r\n\r\n"
             b'{"key": 1, "value": "great-city"}'
@@ -108,8 +127,9 @@ test_requests = [
             query_string=None,
             is_keepalive=True,
             headers=(
-                (b"Content-Length", b"33"),
-                (b"Content-Type", b"application/json"),
+                (b"host", b"localhost"),
+                (b"content-length", b"33"),
+                (b"content-type", b"application/json"),
             ),
         ),
         expected_body=b'{"key": 1, "value": "great-city"}',
@@ -117,6 +137,7 @@ test_requests = [
     TestRequest(
         request_bytes=(
             b"POST /data/ HTTP/1.1\r\n"
+            b"Host: localhost\r\n"
             b"Content-Length: 33\r\n"
             b"Content-Type: application/json\r\n\r\n"
             b'{"key": 1, "value": "great-city"}'
@@ -129,8 +150,9 @@ test_requests = [
             query_string=None,
             is_keepalive=True,
             headers=(
-                (b"Content-Length", b"33"),
-                (b"Content-Type", b"application/json"),
+                (b"host", b"localhost"),
+                (b"content-length", b"33"),
+                (b"content-type", b"application/json"),
             ),
         ),
         expected_body=b'{"key": 1, "value": "great-city"}',
