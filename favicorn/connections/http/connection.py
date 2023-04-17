@@ -17,39 +17,43 @@ class HTTPConnection(IConnection):
         controller_factory: IHTTPControllerFactory,
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
+        default_read_batch: int = 4028,
+        keepalive_timeout_s: int = 5,
     ) -> None:
         self.reader = reader
         self.writer = writer
-        self.controller_factory = controller_factory
-        self.client = get_remote_addr(writer)
         self.keepalive = True
+        self.client = get_remote_addr(writer)
+        self.controller_factory = controller_factory
+        self.default_read_batch = default_read_batch
+        self.keepalive_timeout_s = keepalive_timeout_s
 
     async def init(self) -> None:
         pass
 
     async def main(self) -> None:
         while self.keepalive:
-            if data := await self.read(timeout=5):
-                await self.handle_request(data)
-            else:
+            data = await self.read(timeout=self.keepalive_timeout_s)
+            if data is None:
                 self.keepalive = False
+                continue
+            await self.handle_request(data)
 
     async def handle_request(self, data: bytes) -> None:
         controller = self.controller_factory.build(client=self.client)
         event_bus = await controller.start(initial_data=data)
         async for event in event_bus:
             if isinstance(event, HTTPControllerReceiveEvent):
-                data = await self.read(count=event.count)
-                event_bus.send(data)
+                event_bus.send(await self.read(count=event.count))
             elif isinstance(event, HTTPControllerSendEvent):
                 self.writer.write(event.data)
             else:
                 raise ValueError(f"Unhandled event type {type(event)}")
-        self.keepalive = (
-            not self.writer.is_closing() and controller.is_keepalive()
-        )
-        if not self.writer.is_closing():
-            await self.writer.drain()
+        if self.writer.is_closing():
+            self.keepalive = False
+            return
+        self.keepalive = controller.is_keepalive()
+        await self.writer.drain()
 
     @overload
     async def read(
@@ -77,7 +81,7 @@ class HTTPConnection(IConnection):
 
     async def _read(self, count: int | None = None) -> bytes | None:
         if count is None:
-            count = 4028
+            count = self.default_read_batch
         data = await self.reader.read(count)
         if self.reader.at_eof():
             return None
