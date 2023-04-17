@@ -6,7 +6,7 @@ from .controller_events import HTTPControllerEvent
 
 class IEventBus(ABC, AsyncGenerator[HTTPControllerEvent, None]):
     @abstractmethod
-    def dispatch_event(self, event: HTTPControllerEvent | None) -> None:
+    def dispatch_event(self, event: HTTPControllerEvent) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -15,6 +15,10 @@ class IEventBus(ABC, AsyncGenerator[HTTPControllerEvent, None]):
 
     @abstractmethod
     async def receive(self) -> bytes | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def close(self) -> None:
         raise NotImplementedError
 
 

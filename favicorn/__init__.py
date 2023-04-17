@@ -8,7 +8,7 @@ from .connections import (
     HTTPToolsParser,
     HTTPToolsParserFactory,
 )
-from .iconnection_factory import IConnectionFactory
+from .iconnection import IConnectionFactory
 from .isocket_provider import ISocketProvider
 from .server import Server as Favicorn
 from .socket_providers import InetSocketProvider, UnixSocketProvider

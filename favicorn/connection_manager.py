@@ -1,6 +1,6 @@
 import asyncio
 
-from .iconnection_factory import IConnectionFactory
+from .iconnection import IConnectionFactory
 
 
 class ConnectionManager:

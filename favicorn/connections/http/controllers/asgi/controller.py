@@ -46,14 +46,9 @@ class Events:
 
 class HTTPASGIController(IHTTPController):
     app: ASGI3Application
-    events: Events
     task: asyncio.Task[Any] | None
-    receive_buffer: bytes | None
-    more_body: bool
     response_metadata: ResponseMetadata | None
     expected_event: ASGIResponseEvents | None
-    response_body: bytes | None
-    response_more_body: bool
 
     def __init__(
         self,
@@ -64,20 +59,14 @@ class HTTPASGIController(IHTTPController):
         client: tuple[str, int] | None,
     ) -> None:
         self.app = app
-        self.parser = parser
-        self.serializer = serializer
         self.client = client
-        self.events = Events()
-        self.task = None
-        self.body = None
-        self.receive_buffer = b""
-        self.more_body = True
-        self.expected_event = ASGIResponseEvents.START
-        self.response_metadata = None
-        self.more_headers = True
-        self.response_body = None
-        self.response_more_body = True
+        self.parser = parser
         self.event_bus = event_bus
+        self.serializer = serializer
+
+        self.task = None
+        self.response_metadata = None
+        self.expected_event = ASGIResponseEvents.START
 
     async def start(
         self,
@@ -101,7 +90,7 @@ class HTTPASGIController(IHTTPController):
             )
             self.task = asyncio.create_task(self.main(scope))
         else:
-            self.event_bus.dispatch_event(None)
+            self.event_bus.close()
         return self.event_bus
 
     async def wait_for_metadata(
@@ -162,7 +151,7 @@ class HTTPASGIController(IHTTPController):
             )
         ) + self.serializer.serialize_body(content)
         self.event_bus.dispatch_event(HTTPControllerSendEvent(data))
-        self.event_bus.dispatch_event(None)
+        self.event_bus.close()
 
     async def send(self, event: ASGISendEvent) -> None:
         self.validate_event_type(event["type"])
@@ -211,7 +200,7 @@ class HTTPASGIController(IHTTPController):
                 )
                 if more_body is False:
                     self.expected_event = None
-                    self.event_bus.dispatch_event(None)
+                    self.event_bus.close()
             case _:
                 raise RuntimeError(f"Unhandled event type: {event['type']}")
 

@@ -29,7 +29,10 @@ class DequeEventBus(IEventBus):
         self.provider_event.clear()
         return await self.receive()
 
-    def dispatch_event(self, event: HTTPControllerEvent | None) -> None:
+    def dispatch_event(self, event: HTTPControllerEvent) -> None:
+        self._dispatch_event(event)
+
+    def _dispatch_event(self, event: HTTPControllerEvent | None) -> None:
         self.controller_queue.append(event)
         self.controller_event.set()
 
@@ -51,6 +54,9 @@ class DequeEventBus(IEventBus):
             return self.controller_queue.popleft()
         self.controller_event.clear()
         return await self.get_event()
+
+    def close(self) -> None:
+        self._dispatch_event(None)
 
 
 class DequeEventBusFactory(IEventBusFactory):

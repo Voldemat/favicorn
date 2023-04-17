@@ -1,7 +1,7 @@
 import asyncio
 
 from .connection_manager import ConnectionManager
-from .iconnection_factory import IConnectionFactory
+from .iconnection import IConnectionFactory
 from .isocket_provider import ISocketProvider
 
 

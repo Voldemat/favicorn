@@ -1,7 +1,6 @@
 import asyncio
 
-from favicorn.iconnection import IConnection
-from favicorn.iconnection_factory import IConnectionFactory
+from favicorn.iconnection import IConnection, IConnectionFactory
 
 from .connection import HTTPConnection
 from .icontroller import IHTTPControllerFactory
