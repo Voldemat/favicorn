@@ -31,3 +31,9 @@ class IHTTPParser(ABC):
     @abstractmethod
     def is_keepalive(self) -> bool:
         raise NotImplementedError
+
+
+class IHTTPParserFactory(ABC):
+    @abstractmethod
+    def build(self) -> IHTTPParser:
+        raise NotImplementedError

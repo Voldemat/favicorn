@@ -1,19 +1,7 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import AsyncGenerator
 
-
-@dataclass
-class HTTPControllerReceiveEvent:
-    count: int | None = None
-
-
-@dataclass
-class HTTPControllerSendEvent:
-    data: bytes
-
-
-HTTPControllerEvent = HTTPControllerReceiveEvent | HTTPControllerSendEvent
+from .controller_events import HTTPControllerEvent
 
 
 class IHTTPController(ABC):
@@ -34,4 +22,10 @@ class IHTTPController(ABC):
 
     @abstractmethod
     async def stop(self) -> None:
+        raise NotImplementedError
+
+
+class IHTTPControllerFactory(ABC):
+    @abstractmethod
+    def build(self, client: tuple[str, int] | None) -> IHTTPController:
         raise NotImplementedError

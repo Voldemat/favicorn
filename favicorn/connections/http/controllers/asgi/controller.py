@@ -18,12 +18,12 @@ from asgiref.typing import (
     HTTPScope,
 )
 
-from favicorn.connections.http.icontroller import (
+from favicorn.connections.http.controller_events import (
     HTTPControllerEvent,
     HTTPControllerReceiveEvent,
     HTTPControllerSendEvent,
-    IHTTPController,
 )
+from favicorn.connections.http.icontroller import IHTTPController
 from favicorn.connections.http.iparser import IHTTPParser
 from favicorn.connections.http.iserializer import IHTTPSerializer
 from favicorn.connections.http.request_metadata import RequestMetadata

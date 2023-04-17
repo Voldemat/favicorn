@@ -4,7 +4,7 @@ from favicorn.iconnection import IConnection
 from favicorn.iconnection_factory import IConnectionFactory
 
 from .connection import HTTPConnection
-from .icontroller_factory import IHTTPControllerFactory
+from .icontroller import IHTTPControllerFactory
 
 
 class HTTPConnectionFactory(IConnectionFactory):

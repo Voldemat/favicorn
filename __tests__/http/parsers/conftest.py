@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from favicorn.connections.http.iparser_factory import IHTTPParserFactory
+from favicorn.connections.http.iparser import IHTTPParserFactory
 from favicorn.connections.http.parsers import HTTPToolsParserFactory
 from favicorn.connections.http.request_metadata import RequestMetadata
 

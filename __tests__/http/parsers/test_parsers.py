@@ -1,4 +1,4 @@
-from favicorn.connections.http.iparser_factory import IHTTPParserFactory
+from favicorn.connections.http.iparser import IHTTPParserFactory
 
 import pytest
 

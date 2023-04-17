@@ -4,7 +4,7 @@ from email.utils import formatdate
 from http import HTTPStatus
 from typing import Iterable
 
-from ..iserializer import IHTTPSerializer
+from ..iserializer import IHTTPSerializer, IHTTPSerializerFactory
 from ..response_metadata import ResponseMetadata
 
 
@@ -39,3 +39,8 @@ class BaseHTTPSerializer(IHTTPSerializer):
 
     def encode_headers(self, headers: Iterable[tuple[bytes, bytes]]) -> bytes:
         return b"".join(map(lambda h: h[0] + b": " + h[1] + b"\r\n", headers))
+
+
+class BaseHTTPSerializerFactory(IHTTPSerializerFactory):
+    def build(self) -> IHTTPSerializer:
+        return BaseHTTPSerializer()

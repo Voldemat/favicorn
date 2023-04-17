@@ -2,7 +2,7 @@ from .connection import HTTPConnection
 from .controllers import HTTPASGIController, HTTPASGIControllerFactory
 from .factory import HTTPConnectionFactory
 from .parsers import HTTPToolsParser, HTTPToolsParserFactory
-from .serializers import BaseHTTPSerializer
+from .serializers import BaseHTTPSerializer, BaseHTTPSerializerFactory
 
 __all__ = (
     "HTTPConnectionFactory",
@@ -12,4 +12,5 @@ __all__ = (
     "HTTPASGIController",
     "HTTPASGIControllerFactory",
     "HTTPToolsParserFactory",
+    "BaseHTTPSerializerFactory",
 )

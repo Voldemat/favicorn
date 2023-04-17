@@ -1,13 +1,13 @@
-from typing import Callable
-
 from asgiref.typing import ASGI3Application
 
-from favicorn.connections.http.icontroller import IHTTPController
-from favicorn.connections.http.icontroller_factory import (
+from favicorn.connections.http.icontroller import (
+    IHTTPController,
     IHTTPControllerFactory,
 )
-from favicorn.connections.http.iparser_factory import IHTTPParserFactory
-from favicorn.connections.http.iserializer import IHTTPSerializer
+from favicorn.connections.http.iparser import IHTTPParserFactory
+from favicorn.connections.http.iserializer import (
+    IHTTPSerializerFactory,
+)
 
 
 from .controller import HTTPASGIController
@@ -18,7 +18,7 @@ class HTTPASGIControllerFactory(IHTTPControllerFactory):
         self,
         app: ASGI3Application,
         parser_factory: IHTTPParserFactory,
-        serializer_factory: Callable[[], IHTTPSerializer],
+        serializer_factory: IHTTPSerializerFactory,
     ) -> None:
         self.app = app
         self.parser_factory = parser_factory
@@ -28,6 +28,6 @@ class HTTPASGIControllerFactory(IHTTPControllerFactory):
         return HTTPASGIController(
             app=self.app,
             parser=self.parser_factory.build(),
-            serializer=self.serializer_factory(),
+            serializer=self.serializer_factory.build(),
             client=client,
         )

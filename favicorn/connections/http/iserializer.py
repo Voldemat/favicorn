@@ -14,3 +14,9 @@ class IHTTPSerializer(ABC):
     @abstractmethod
     def serialize_body(self, body: bytes) -> bytes:
         raise NotImplementedError
+
+
+class IHTTPSerializerFactory(ABC):
+    @abstractmethod
+    def build(self) -> IHTTPSerializer:
+        raise NotImplementedError

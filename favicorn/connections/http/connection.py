@@ -4,11 +4,11 @@ from typing import overload
 from favicorn.iconnection import IConnection
 from favicorn.utils import get_remote_addr
 
-from .icontroller import (
+from .controller_events import (
     HTTPControllerReceiveEvent,
     HTTPControllerSendEvent,
 )
-from .icontroller_factory import IHTTPControllerFactory
+from .icontroller import IHTTPControllerFactory
 
 
 class HTTPConnection(IConnection):
