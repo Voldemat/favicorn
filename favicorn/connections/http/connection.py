@@ -37,9 +37,9 @@ class HTTPConnection(IConnection):
             if data is None:
                 self.keepalive = False
                 continue
-            await self.handle_request(data)
+            await self.process_request(data)
 
-    async def handle_request(self, data: bytes) -> None:
+    async def process_request(self, data: bytes) -> None:
         controller = self.controller_factory.build(client=self.client)
         event_bus = await controller.start(initial_data=data)
         async for event in event_bus:
