@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator
 
-from .controller_events import HTTPControllerEvent
+from .ievent_bus import IEventBus
 
 
 class IHTTPController(ABC):
@@ -9,11 +8,7 @@ class IHTTPController(ABC):
     async def start(
         self,
         initial_data: bytes | None,
-    ) -> AsyncGenerator[HTTPControllerEvent, None]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def receive_data(self, data: bytes | None) -> None:
+    ) -> IEventBus:
         raise NotImplementedError
 
     @abstractmethod

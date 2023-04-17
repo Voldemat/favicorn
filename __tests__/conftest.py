@@ -11,6 +11,7 @@ from favicorn import (
     HTTPToolsParserFactory,
     InetSocketProvider,
 )
+from favicorn.connections.http.event_buses import DequeEventBusFactory
 
 import httptools
 
@@ -44,6 +45,7 @@ def serving_app(
                     app,
                     parser_factory=HTTPToolsParserFactory(httptools),
                     serializer_factory=BaseHTTPSerializerFactory(),
+                    event_bus_factory=DequeEventBusFactory(),
                 ),
             ),
             socket_provider=InetSocketProvider(

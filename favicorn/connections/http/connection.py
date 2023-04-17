@@ -36,10 +36,11 @@ class HTTPConnection(IConnection):
 
     async def handle_request(self, data: bytes) -> None:
         controller = self.controller_factory.build(client=self.client)
-        async for event in await controller.start(initial_data=data):
+        event_bus = await controller.start(initial_data=data)
+        async for event in event_bus:
             if isinstance(event, HTTPControllerReceiveEvent):
                 data = await self.read(count=event.count)
-                controller.receive_data(data)
+                event_bus.send(data)
             elif isinstance(event, HTTPControllerSendEvent):
                 self.writer.write(event.data)
             else:

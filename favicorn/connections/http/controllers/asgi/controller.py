@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import enum
-from collections import deque
-from typing import Any, AsyncGenerator, cast
+from typing import Any, cast
 
 from asgiref.typing import (
     ASGI3Application,
@@ -19,11 +18,11 @@ from asgiref.typing import (
 )
 
 from favicorn.connections.http.controller_events import (
-    HTTPControllerEvent,
     HTTPControllerReceiveEvent,
     HTTPControllerSendEvent,
 )
 from favicorn.connections.http.icontroller import IHTTPController
+from favicorn.connections.http.ievent_bus import IEventBus
 from favicorn.connections.http.iparser import IHTTPParser
 from favicorn.connections.http.iserializer import IHTTPSerializer
 from favicorn.connections.http.request_metadata import RequestMetadata
@@ -45,12 +44,9 @@ class Events:
         self.send = asyncio.Event()
 
 
-class HTTPASGIController(
-    IHTTPController, AsyncGenerator[HTTPControllerEvent, None]
-):
+class HTTPASGIController(IHTTPController):
     app: ASGI3Application
     events: Events
-    queue: deque[HTTPControllerEvent]
     task: asyncio.Task[Any] | None
     receive_buffer: bytes | None
     more_body: bool
@@ -64,6 +60,7 @@ class HTTPASGIController(
         app: ASGI3Application,
         parser: IHTTPParser,
         serializer: IHTTPSerializer,
+        event_bus: IEventBus,
         client: tuple[str, int] | None,
     ) -> None:
         self.app = app
@@ -80,32 +77,32 @@ class HTTPASGIController(
         self.more_headers = True
         self.response_body = None
         self.response_more_body = True
-        self.queue = deque()
+        self.event_bus = event_bus
 
     async def start(
         self,
         initial_data: bytes | None,
-    ) -> AsyncGenerator[HTTPControllerEvent, None]:
-        metadata = await self.wait_for_metadata(initial_data)
-        if metadata is None:
-            return self
-        scope = HTTPScope(
-            type="http",
-            scheme="http",
-            path=metadata.path,
-            asgi=ASGIVersions(spec_version="2.3", version="3.0"),
-            http_version=metadata.http_version,
-            raw_path=metadata.raw_path,
-            query_string=metadata.query_string or b"",
-            headers=metadata.headers,
-            root_path="",
-            server=None,
-            client=self.client,
-            extensions={},
-            method=metadata.method,
-        )
-        self.task = asyncio.create_task(self.main(scope))
-        return self
+    ) -> IEventBus:
+        if metadata := await self.wait_for_metadata(initial_data):
+            scope = HTTPScope(
+                type="http",
+                scheme="http",
+                path=metadata.path,
+                asgi=ASGIVersions(spec_version="2.3", version="3.0"),
+                http_version=metadata.http_version,
+                raw_path=metadata.raw_path,
+                query_string=metadata.query_string or b"",
+                headers=metadata.headers,
+                root_path="",
+                server=None,
+                client=self.client,
+                extensions={},
+                method=metadata.method,
+            )
+            self.task = asyncio.create_task(self.main(scope))
+        else:
+            self.event_bus.dispatch_event(None)
+        return self.event_bus
 
     async def wait_for_metadata(
         self, initial_data: bytes | None
@@ -120,10 +117,8 @@ class HTTPASGIController(
         return self.parser.get_metadata()
 
     async def receive_from_connection(self) -> bytes | None:
-        self.dispatch_event(HTTPControllerReceiveEvent())
-        await self.events.receive.wait()
-        self.events.receive.clear()
-        return self.receive_buffer
+        self.event_bus.dispatch_event(HTTPControllerReceiveEvent())
+        return await self.event_bus.receive()
 
     async def stop(self) -> None:
         if self.task is None or self.task.done():
@@ -134,43 +129,12 @@ class HTTPASGIController(
         except asyncio.CancelledError:
             pass
 
-    def __aiter__(self) -> AsyncGenerator[HTTPControllerEvent, None]:
-        return self
-
-    async def asend(self, _: dict[str, Any] | None) -> HTTPControllerEvent:
-        event = await self.get_event()
-        if event is None:
-            raise StopAsyncIteration()
-        return event
-
-    async def athrow(self, *args: Any, **kwargs: Any) -> HTTPControllerEvent:
-        return await super().athrow(*args, **kwargs)
-
-    async def get_event(self) -> HTTPControllerEvent | None:
-        if self.task is None:
-            return None
-        await self.events.send.wait()
-        if len(self.queue) != 0:
-            return self.queue.popleft()
-        self.events.send.clear()
-        if self.task.done():
-            return None
-        return await self.get_event()
-
-    def dispatch_event(self, event: HTTPControllerEvent) -> None:
-        self.queue.append(event)
-        self.events.send.set()
-
     async def main(self, scope: HTTPScope) -> None:
         try:
             await self.app(scope, self.receive, self.send)
         except BaseException as unhandled_error:
             print("UnhandledError: ", unhandled_error.__repr__())
             await self.send_500_response()
-
-    def receive_data(self, data: bytes | None) -> None:
-        self.receive_buffer = data
-        self.events.receive.set()
 
     async def receive(self) -> ASGIReceiveEvent:
         if not self.parser.has_body():
@@ -197,7 +161,8 @@ class HTTPASGIController(
                 headers=headers,
             )
         ) + self.serializer.serialize_body(content)
-        self.dispatch_event(HTTPControllerSendEvent(data))
+        self.event_bus.dispatch_event(HTTPControllerSendEvent(data))
+        self.event_bus.dispatch_event(None)
 
     async def send(self, event: ASGISendEvent) -> None:
         self.validate_event_type(event["type"])
@@ -213,7 +178,7 @@ class HTTPASGIController(
                     self.expected_event = ASGIResponseEvents.TRAILERS
                 else:
                     self.expected_event = ASGIResponseEvents.BODY
-                    self.dispatch_event(
+                    self.event_bus.dispatch_event(
                         HTTPControllerSendEvent(
                             self.serializer.serialize_metadata(
                                 self.response_metadata
@@ -229,7 +194,7 @@ class HTTPASGIController(
                 self.response_metadata.add_extra_headers(event["headers"])
                 if more_trailers is False:
                     self.expected_event = ASGIResponseEvents.BODY
-                    self.dispatch_event(
+                    self.event_bus.dispatch_event(
                         HTTPControllerSendEvent(
                             data=self.serializer.serialize_metadata(
                                 self.response_metadata
@@ -239,13 +204,14 @@ class HTTPASGIController(
             case ASGIResponseEvents.BODY:
                 event = cast(HTTPResponseBodyEvent, event)
                 more_body = event.get("more_body", False)
-                self.dispatch_event(
+                self.event_bus.dispatch_event(
                     HTTPControllerSendEvent(
                         self.serializer.serialize_body(event["body"])
                     )
                 )
                 if more_body is False:
                     self.expected_event = None
+                    self.event_bus.dispatch_event(None)
             case _:
                 raise RuntimeError(f"Unhandled event type: {event['type']}")
 
