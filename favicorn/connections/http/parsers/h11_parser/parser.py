@@ -29,14 +29,21 @@ class H11HTTPParser(IHTTPParser):
         self.http_version = None
         self.query_string = None
         self.keepalive = True
-        self.body = b""
+        self.body = None
 
     def feed_data(self, data: bytes) -> None:
         self.parser.receive_data(data)
         self.process_event()
 
     def process_event(self) -> None:
-        event = self.parser.next_event()
+        try:
+            event = self.parser.next_event()
+        except self.h11.RemoteProtocolError as error:
+            if str(error) == "Missing mandatory Host: header":
+                self.error = HTTPParsingException("Host header is abscent")
+            else:
+                self.error = HTTPParsingException(error)
+            return
         if event is self.h11.NEED_DATA:
             return
         if isinstance(event, self.h11.Request):
@@ -71,6 +78,8 @@ class H11HTTPParser(IHTTPParser):
         elif isinstance(event, self.h11.Data):
             self.body = event.data
         elif isinstance(event, self.h11.EndOfMessage):
+            if self.body is None:
+                self.body = b""
             return
         return self.process_event()
 
@@ -92,11 +101,11 @@ class H11HTTPParser(IHTTPParser):
         return RequestMetadata(
             path=self.path,
             method=self.method,
-            raw_path=self.path.encode(),
-            http_version=self.http_version,
-            is_keepalive=self.keepalive,
-            query_string=self.query_string,
             headers=self.headers,
+            raw_path=self.path.encode(),
+            is_keepalive=self.keepalive,
+            http_version=self.http_version,
+            query_string=self.query_string,
         )
 
     def has_error(self) -> bool:

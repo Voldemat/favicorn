@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
 from types import ModuleType
 from typing import Any
@@ -64,31 +63,34 @@ class HTTPToolsParser(IHTTPParser):
         self.httptools = httptools
         self.parser = httptools.HttpRequestParser(self)
         self.state = HTTPParserState()
-        self.body_event = asyncio.Event()
-        self.headers_event = asyncio.Event()
         self.disconnected = False
         self.error = None
+        self.is_host_present = False
 
     def on_url(self, url: bytes) -> None:
         self.state.raw_url = url
 
     def on_header(self, name: bytes, value: bytes) -> None:
         self.state.add_header(name, value)
+        if name.decode().lower() == "host":
+            if self.is_host_present:
+                self.error = HTTPParsingException("Host have multiple entries")
+            else:
+                self.is_host_present = True
 
     def on_headers_complete(self) -> None:
         self.state.http_version = self.parser.get_http_version()
         self.state.method = self.parser.get_method().decode().upper()
-        self.headers_event.set()
+        if not self.is_host_present and self.state.http_version == "1.1":
+            self.error = HTTPParsingException("Host header is abscent")
 
     def on_body(self, body: bytes) -> None:
         self.state.body = body
-        self.body_event.set()
 
     def on_message_complete(self) -> None:
         if self.state.body is None:
             self.state.body = b""
         self.state.more_body = False
-        self.body_event.set()
 
     def has_error(self) -> bool:
         return self.error is not None
@@ -98,10 +100,9 @@ class HTTPToolsParser(IHTTPParser):
         return self.error
 
     def has_body(self) -> bool:
-        return self.body_event.is_set() and self.state.body is not None
+        return self.state.body is not None
 
     def get_body(self) -> bytes:
-        self.body_event.clear()
         body = self.state.body
         self.state.body = None
         assert body is not None
