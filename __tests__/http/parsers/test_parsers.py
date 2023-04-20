@@ -41,6 +41,13 @@ async def test_parse_request(
             "Host header is abscent",
         ),
         (b"GET / HTTP/1.0\r\n\r\n\r\n", None),
+        (b"GET / HTTP/1.1\r\n" b"Host: localhost\r\n\r\n", None),
+        (
+            b"GET / HTTP/1.1\r\n"
+            b"Host: localhost\r\n"
+            b"Host: 127.0.0.1\r\n\r\n",
+            "Host have multiple entries",
+        ),
     ],
 )
 @pytest.mark.parametrize("parser_factory", parser_factories)
@@ -62,3 +69,5 @@ async def test_raise_error_on_h11_request_with_invalid_host(
     else:
         assert not parser.has_error()
         assert parser.is_metadata_ready()
+        assert parser.has_body()
+        assert parser.get_body() == b""

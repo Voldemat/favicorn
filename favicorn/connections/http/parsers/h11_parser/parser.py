@@ -41,6 +41,8 @@ class H11HTTPParser(IHTTPParser):
         except self.h11.RemoteProtocolError as error:
             if str(error) == "Missing mandatory Host: header":
                 self.error = HTTPParsingException("Host header is abscent")
+            elif str(error) == "Found multiple Host: headers":
+                self.error = HTTPParsingException("Host have multiple entries")
             else:
                 self.error = HTTPParsingException(error)
             return
