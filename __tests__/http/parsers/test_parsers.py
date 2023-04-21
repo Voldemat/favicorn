@@ -41,7 +41,7 @@ async def test_parse_request(
             "Host header is abscent",
         ),
         (b"GET / HTTP/1.0\r\n\r\n\r\n", None),
-        (b"GET / HTTP/1.1\r\n" b"Host: localhost\r\n\r\n", None),
+        (b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n", None),
         (
             b"GET / HTTP/1.1\r\n"
             b"Host: localhost\r\n"
@@ -67,7 +67,7 @@ async def test_raise_error_on_h11_request_with_invalid_host(
         assert isinstance(exception, HTTPParsingException), exception
         assert str(exception) == expected_error, exception
     else:
-        assert not parser.has_error()
+        assert not parser.has_error(), parser.get_error()
         assert parser.is_metadata_ready()
         assert parser.has_body()
         assert parser.get_body() == b""

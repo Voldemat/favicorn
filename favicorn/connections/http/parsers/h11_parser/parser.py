@@ -13,23 +13,23 @@ class H11HTTPParser(IHTTPParser):
     error: HTTPParsingException | None
     path: str | None
     method: str | None
-    headers: Iterable[tuple[bytes, bytes]] | None
+    headers: list[tuple[bytes, bytes]]
     http_version: str | None
     query_string: bytes | None
-    keepalive: bool
     body: bytes | None
+    connection_header: str | None
 
     def __init__(self, h11: ModuleType) -> None:
         self.h11 = h11
         self.parser = h11.Connection(our_role=h11.SERVER)
         self.error = None
         self.path = None
+        self.body = None
         self.method = None
-        self.headers = None
+        self.headers = []
         self.http_version = None
         self.query_string = None
-        self.keepalive = True
-        self.body = None
+        self.connection_header = None
 
     def feed_data(self, data: bytes) -> None:
         self.parser.receive_data(data)
@@ -48,42 +48,45 @@ class H11HTTPParser(IHTTPParser):
             return
         if event is self.h11.NEED_DATA:
             return
-        if isinstance(event, self.h11.Request):
-            full_path = event.target.decode()
-            if "?" in full_path:
-                self.path, query = full_path.split("?")
-                self.query_string = query.encode()
-            else:
-                self.path = full_path
-            self.method = event.method.decode()
-            self.headers = list(
-                map(
-                    lambda item: (
-                        item[0].decode().lower().encode(),
-                        item[1].decode().lower().encode(),
-                    ),
-                    event.headers,
-                )
-            )
-            self.http_version = event.http_version.decode()
-            self.keepalive = self.http_version == "1.1"
-            if connection_header := next(
-                map(
-                    lambda item: item[1].decode(),
-                    filter(
-                        lambda item: item[0] == b"connection", self.headers
-                    ),
-                ),
-                None,
-            ):
-                self.keepalive = connection_header == "keep-alive"
+        elif isinstance(event, self.h11.Request):
+            self.set_path(event.target.decode())
+            self.set_method(event.method.decode())
+            self.set_headers(event.headers)
+            self.set_http_version(event.http_version.decode())
         elif isinstance(event, self.h11.Data):
-            self.body = event.data
+            self.set_body(event.data)
         elif isinstance(event, self.h11.EndOfMessage):
             if self.body is None:
-                self.body = b""
+                self.set_body(b"")
             return
         return self.process_event()
+
+    def set_path(self, path: str) -> None:
+        if "?" in path:
+            path, query = path.split("?")
+            self.query_string = query.encode()
+        self.path = path
+
+    def set_method(self, method: str) -> None:
+        self.method = method.upper()
+
+    def set_headers(self, headers: Iterable[tuple[bytes, bytes]]) -> None:
+        for header, value in map(
+            lambda item: (
+                item[0].decode().lower().encode(),
+                item[1].decode().lower().encode(),
+            ),
+            headers,
+        ):
+            self.headers.append((header, value))
+            if header == b"connection":
+                self.connection_header = value.decode()
+
+    def set_http_version(self, http_version: str) -> None:
+        self.http_version = http_version
+
+    def set_body(self, body: bytes) -> None:
+        self.body = body
 
     def is_metadata_ready(self) -> bool:
         return (
@@ -105,7 +108,7 @@ class H11HTTPParser(IHTTPParser):
             method=self.method,
             headers=self.headers,
             raw_path=self.path.encode(),
-            is_keepalive=self.keepalive,
+            is_keepalive=self.is_keepalive(),
             http_version=self.http_version,
             query_string=self.query_string,
         )
@@ -130,7 +133,11 @@ class H11HTTPParser(IHTTPParser):
         return False
 
     def is_keepalive(self) -> bool:
-        return self.http_version == "1.1"
+        if self.connection_header == "keep-alive":
+            return True
+        if self.connection_header == "close":
+            return False
+        return self.http_version != "1.0"
 
 
 class H11HTTPParserFactory(IHTTPParserFactory):
