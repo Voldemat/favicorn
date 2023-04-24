@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import enum
+import logging
 from typing import Any, cast
 
 from asgiref.typing import (
@@ -23,7 +24,7 @@ from favicorn.connections.http.controller_events import (
 )
 from favicorn.connections.http.icontroller import IHTTPController
 from favicorn.connections.http.ievent_bus import IHTTPEventBus
-from favicorn.connections.http.iparser import IHTTPParser
+from favicorn.connections.http.iparser import HTTPParsingException, IHTTPParser
 from favicorn.connections.http.iserializer import IHTTPSerializer
 from favicorn.connections.http.request_metadata import RequestMetadata
 from favicorn.connections.http.response_metadata import ResponseMetadata
@@ -35,20 +36,17 @@ class ASGIResponseEvents(enum.Enum):
     BODY = "http.response.body"
 
 
-class Events:
-    receive: asyncio.Event
-    send: asyncio.Event
-
-    def __init__(self) -> None:
-        self.receive = asyncio.Event()
-        self.send = asyncio.Event()
-
-
 class HTTPASGIController(IHTTPController):
     app: ASGI3Application
     task: asyncio.Task[Any] | None
     response_metadata: ResponseMetadata | None
     expected_event: ASGIResponseEvents | None
+    client: tuple[str, int] | None
+    parser: IHTTPParser
+    event_bus: IHTTPEventBus
+    serializer: IHTTPSerializer
+    logger: logging.Logger
+    request_path: str | None
 
     def __init__(
         self,
@@ -57,12 +55,15 @@ class HTTPASGIController(IHTTPController):
         serializer: IHTTPSerializer,
         event_bus: IHTTPEventBus,
         client: tuple[str, int] | None,
+        logger: logging.Logger,
     ) -> None:
         self.app = app
         self.client = client
         self.parser = parser
+        self.logger = logger
         self.event_bus = event_bus
         self.serializer = serializer
+        self.request_path = None
 
         self.task = None
         self.response_metadata = None
@@ -72,7 +73,16 @@ class HTTPASGIController(IHTTPController):
         self,
         initial_data: bytes | None,
     ) -> IHTTPEventBus:
-        if metadata := await self.wait_for_metadata(initial_data):
+        try:
+            metadata = await self.wait_for_metadata(initial_data)
+        except HTTPParsingException:
+            self.logger.exception(
+                "ASGIController couldn`t obtain RequestMetadata"
+            )
+            metadata = None
+        if metadata is not None:
+            self.logger.debug(f"ASGIController receives metadata: {metadata}")
+            self.request_path = metadata.path
             scope = HTTPScope(
                 type="http",
                 scheme="http",
@@ -88,8 +98,13 @@ class HTTPASGIController(IHTTPController):
                 extensions={},
                 method=metadata.method,
             )
+            self.logger.debug(f"ASGIController builds scope: {scope}")
             self.task = asyncio.create_task(self.main(scope))
+            self.logger.debug("ASGIApplication task is scheduled")
         else:
+            self.logger.error(
+                "ASGIApplication couldn`t obtain RequestMetadata"
+            )
             self.event_bus.close()
         return self.event_bus
 
@@ -123,8 +138,8 @@ class HTTPASGIController(IHTTPController):
     async def main(self, scope: HTTPScope) -> None:
         try:
             await self.app(scope, self.receive, self.send)
-        except BaseException as unhandled_error:
-            print("UnhandledError: ", unhandled_error.__repr__())
+        except BaseException:
+            self.logger.exception("ASGICallable raised an exception")
             await self.send_500_response()
 
     async def receive(self) -> ASGIReceiveEvent:
@@ -152,8 +167,12 @@ class HTTPASGIController(IHTTPController):
                 headers=headers,
             )
         ) + self.serializer.serialize_body(content)
+        self.log_response(500)
         self.event_bus.dispatch_event(HTTPControllerSendEvent(data))
         self.event_bus.close()
+
+    def log_response(self, status: int) -> None:
+        self.logger.info(f"[{status}] - {self.request_path}")
 
     async def send(self, event: ASGISendEvent) -> None:
         self.validate_event_type(event["type"])
@@ -164,6 +183,7 @@ class HTTPASGIController(IHTTPController):
                     status=event["status"],
                     headers=event["headers"],
                 )
+                self.log_response(event["status"])
                 trailers = event.get("trailers", False)
                 if trailers is True:
                     self.expected_event = ASGIResponseEvents.TRAILERS
