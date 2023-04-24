@@ -22,7 +22,7 @@ from favicorn.connections.http.controller_events import (
     HTTPControllerSendEvent,
 )
 from favicorn.connections.http.icontroller import IHTTPController
-from favicorn.connections.http.ievent_bus import IEventBus
+from favicorn.connections.http.ievent_bus import IHTTPEventBus
 from favicorn.connections.http.iparser import IHTTPParser
 from favicorn.connections.http.iserializer import IHTTPSerializer
 from favicorn.connections.http.request_metadata import RequestMetadata
@@ -55,7 +55,7 @@ class HTTPASGIController(IHTTPController):
         app: ASGI3Application,
         parser: IHTTPParser,
         serializer: IHTTPSerializer,
-        event_bus: IEventBus,
+        event_bus: IHTTPEventBus,
         client: tuple[str, int] | None,
     ) -> None:
         self.app = app
@@ -71,7 +71,7 @@ class HTTPASGIController(IHTTPController):
     async def start(
         self,
         initial_data: bytes | None,
-    ) -> IEventBus:
+    ) -> IHTTPEventBus:
         if metadata := await self.wait_for_metadata(initial_data):
             scope = HTTPScope(
                 type="http",

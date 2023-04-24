@@ -4,7 +4,7 @@ from favicorn.connections.http.icontroller import (
     IHTTPController,
     IHTTPControllerFactory,
 )
-from favicorn.connections.http.ievent_bus import IEventBusFactory
+from favicorn.connections.http.ievent_bus import IHTTPEventBusFactory
 from favicorn.connections.http.iparser import IHTTPParserFactory
 from favicorn.connections.http.iserializer import (
     IHTTPSerializerFactory,
@@ -19,7 +19,7 @@ class HTTPASGIControllerFactory(IHTTPControllerFactory):
         self,
         app: ASGI3Application,
         parser_factory: IHTTPParserFactory,
-        event_bus_factory: IEventBusFactory,
+        event_bus_factory: IHTTPEventBusFactory,
         serializer_factory: IHTTPSerializerFactory,
     ) -> None:
         self.app = app

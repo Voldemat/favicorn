@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from .ievent_bus import IEventBus
+from .ievent_bus import IHTTPEventBus
 
 
 class IHTTPController(ABC):
@@ -8,7 +8,7 @@ class IHTTPController(ABC):
     async def start(
         self,
         initial_data: bytes | None,
-    ) -> IEventBus:
+    ) -> IHTTPEventBus:
         raise NotImplementedError
 
     @abstractmethod

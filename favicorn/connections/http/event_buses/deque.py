@@ -3,10 +3,10 @@ from collections import deque
 from typing import Any, AsyncGenerator
 
 from ..controller_events import HTTPControllerEvent
-from ..ievent_bus import IEventBus, IEventBusFactory
+from ..ievent_bus import IHTTPEventBus, IHTTPEventBusFactory
 
 
-class DequeEventBus(IEventBus):
+class HTTPDequeEventBus(IHTTPEventBus):
     provider_event: asyncio.Event
     controller_event: asyncio.Event
     provider_queue: deque[bytes | None]
@@ -59,6 +59,6 @@ class DequeEventBus(IEventBus):
         self._dispatch_event(None)
 
 
-class DequeEventBusFactory(IEventBusFactory):
-    def build(self) -> IEventBus:
-        return DequeEventBus()
+class HTTPDequeEventBusFactory(IHTTPEventBusFactory):
+    def build(self) -> IHTTPEventBus:
+        return HTTPDequeEventBus()

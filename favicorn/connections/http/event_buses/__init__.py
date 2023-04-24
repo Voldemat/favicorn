@@ -1,3 +1,3 @@
-from .deque import DequeEventBus, DequeEventBusFactory
+from .deque import HTTPDequeEventBus, HTTPDequeEventBusFactory
 
-__all__ = ("DequeEventBus", "DequeEventBusFactory")
+__all__ = ("HTTPDequeEventBus", "HTTPDequeEventBusFactory")

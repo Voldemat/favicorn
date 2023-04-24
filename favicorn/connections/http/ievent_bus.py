@@ -4,7 +4,7 @@ from typing import AsyncGenerator
 from .controller_events import HTTPControllerEvent
 
 
-class IEventBus(ABC, AsyncGenerator[HTTPControllerEvent, None]):
+class IHTTPEventBus(ABC, AsyncGenerator[HTTPControllerEvent, None]):
     @abstractmethod
     def dispatch_event(self, event: HTTPControllerEvent) -> None:
         raise NotImplementedError
@@ -22,7 +22,7 @@ class IEventBus(ABC, AsyncGenerator[HTTPControllerEvent, None]):
         raise NotImplementedError
 
 
-class IEventBusFactory(ABC):
+class IHTTPEventBusFactory(ABC):
     @abstractmethod
-    def build(self) -> IEventBus:
+    def build(self) -> IHTTPEventBus:
         raise NotImplementedError
