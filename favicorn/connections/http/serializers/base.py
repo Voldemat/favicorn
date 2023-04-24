@@ -8,7 +8,7 @@ from ..iserializer import IHTTPSerializer, IHTTPSerializerFactory
 from ..response_metadata import ResponseMetadata
 
 
-class BaseHTTPSerializer(IHTTPSerializer):
+class HTTPBaseSerializer(IHTTPSerializer):
     include_server: bool
     include_timestamp: bool
     include_status_text: bool
@@ -62,6 +62,6 @@ class BaseHTTPSerializer(IHTTPSerializer):
         return b"".join(map(lambda h: h[0] + b": " + h[1] + b"\r\n", headers))
 
 
-class BaseHTTPSerializerFactory(IHTTPSerializerFactory):
+class HTTPBaseSerializerFactory(IHTTPSerializerFactory):
     def build(self) -> IHTTPSerializer:
-        return BaseHTTPSerializer()
+        return HTTPBaseSerializer()

@@ -1,4 +1,4 @@
-from .base import BaseHTTPSerializer, BaseHTTPSerializerFactory
+from .base import HTTPBaseSerializer, HTTPBaseSerializerFactory
 
 
-__all__ = ("BaseHTTPSerializer", "BaseHTTPSerializerFactory")
+__all__ = ("HTTPBaseSerializer", "HTTPBaseSerializerFactory")

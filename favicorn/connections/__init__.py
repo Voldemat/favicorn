@@ -1,8 +1,8 @@
 from .http import (
-    BaseHTTPSerializer,
-    BaseHTTPSerializerFactory,
     HTTPASGIController,
     HTTPASGIControllerFactory,
+    HTTPBaseSerializer,
+    HTTPBaseSerializerFactory,
     HTTPConnection,
     HTTPConnectionFactory,
     HTTPToolsParser,
@@ -11,12 +11,12 @@ from .http import (
 
 
 __all__ = (
-    "BaseHTTPSerializer",
+    "HTTPBaseSerializer",
     "HTTPConnection",
     "HTTPConnectionFactory",
     "HTTPToolsParser",
     "HTTPASGIController",
     "HTTPASGIControllerFactory",
     "HTTPToolsParserFactory",
-    "BaseHTTPSerializerFactory",
+    "HTTPBaseSerializerFactory",
 )

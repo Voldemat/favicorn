@@ -5,10 +5,11 @@ from favicorn.connections.http.iparser import (
 
 import pytest
 
+from __tests__.http.conftest import parser_factories
+
 from .conftest import (
     TestRequest,
     assert_metadata_equals,
-    parser_factories,
     test_requests,
 )
 

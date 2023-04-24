@@ -1,8 +1,8 @@
 from .connections import (
-    BaseHTTPSerializer,
-    BaseHTTPSerializerFactory,
     HTTPASGIController,
     HTTPASGIControllerFactory,
+    HTTPBaseSerializer,
+    HTTPBaseSerializerFactory,
     HTTPConnection,
     HTTPConnectionFactory,
     HTTPToolsParser,
@@ -19,7 +19,7 @@ __all__ = (
     "InetSocketProvider",
     "UnixSocketProvider",
     "HTTPToolsParser",
-    "BaseHTTPSerializer",
+    "HTTPBaseSerializer",
     "ConnectionManager",
     "IConnectionManager",
     "IConnectionFactory",
@@ -28,5 +28,5 @@ __all__ = (
     "HTTPASGIController",
     "HTTPASGIControllerFactory",
     "HTTPToolsParserFactory",
-    "BaseHTTPSerializerFactory",
+    "HTTPBaseSerializerFactory",
 )

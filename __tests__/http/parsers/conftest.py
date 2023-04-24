@@ -1,21 +1,6 @@
 from dataclasses import dataclass
 
-from favicorn.connections.http.iparser import IHTTPParserFactory
-from favicorn.connections.http.parsers import (
-    H11HTTPParserFactory,
-    HTTPToolsParserFactory,
-)
 from favicorn.connections.http.request_metadata import RequestMetadata
-
-import h11
-
-import httptools
-
-
-parser_factories: list[IHTTPParserFactory] = [
-    HTTPToolsParserFactory(httptools),
-    H11HTTPParserFactory(h11),
-]
 
 
 @dataclass
