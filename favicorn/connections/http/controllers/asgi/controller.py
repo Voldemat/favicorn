@@ -98,15 +98,13 @@ class HTTPASGIController(IHTTPController):
     ) -> RequestMetadata | None:
         if initial_data is not None:
             self.parser.feed_data(initial_data)
-        while (
-            not self.parser.is_metadata_ready() and not self.parser.has_error()
-        ):
+        while not self.parser.is_metadata_ready():
             data = await self.receive_from_connection()
             if data is None:
                 return None
             self.parser.feed_data(data)
-        if self.parser.has_error():
-            raise self.parser.get_error()
+            if self.parser.has_error():
+                raise self.parser.get_error()
         return self.parser.get_metadata()
 
     async def receive_from_connection(self) -> bytes | None:
