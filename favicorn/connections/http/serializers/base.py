@@ -33,7 +33,7 @@ class HTTPBaseSerializer(IHTTPSerializer):
         return (
             self.build_first_line(metadata.status)
             + b"\r\n"
-            + self.encode_headers(
+            + self.serialize_headers(
                 itertools.chain(self.get_default_headers(), metadata.headers)
             )
             + b"\r\n"
@@ -58,7 +58,9 @@ class HTTPBaseSerializer(IHTTPSerializer):
     def serialize_body(self, body: bytes) -> bytes:
         return body
 
-    def encode_headers(self, headers: Iterable[tuple[bytes, bytes]]) -> bytes:
+    def serialize_headers(
+        self, headers: Iterable[tuple[bytes, bytes]]
+    ) -> bytes:
         return b"".join(map(lambda h: h[0] + b": " + h[1] + b"\r\n", headers))
 
 
