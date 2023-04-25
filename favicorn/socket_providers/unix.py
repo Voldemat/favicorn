@@ -30,5 +30,5 @@ class UnixSocketProvider(ISocketProvider):
     def cleanup(self) -> None:
         os.unlink(self.path)
 
-    def get_addr(self) -> tuple[str, int] | None:
-        return None
+    def get_addr(self) -> str:
+        return self.path

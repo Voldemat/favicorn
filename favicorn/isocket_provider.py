@@ -12,5 +12,5 @@ class ISocketProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_addr(self) -> tuple[str, int] | None:
+    def get_addr(self) -> str:
         raise NotImplementedError

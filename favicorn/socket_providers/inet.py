@@ -49,5 +49,5 @@ class InetSocketProvider(ISocketProvider):
     def cleanup(self) -> None:
         pass
 
-    def get_addr(self) -> tuple[str, int] | None:
-        return (self.host, self.port)
+    def get_addr(self) -> str:
+        return f"{self.host}:{self.port}"
