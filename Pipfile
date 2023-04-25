@@ -4,10 +4,9 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-httptools = "*"
-asgiref = "*"
 
 [dev-packages]
+asgiref = "*"
 black = "*"
 flake8 = "*"
 flake8-import-order = "*"
@@ -17,6 +16,8 @@ pytest-asyncio = "*"
 ipython = "*"
 pdoc = "*"
 httpx = "*"
+httptools = "*"
+h11 = "*"
 
 [requires]
 python_version = "3.10"

@@ -3,20 +3,18 @@ from __future__ import annotations
 import asyncio
 import enum
 import logging
-from typing import Any, cast
+from typing import Any, TYPE_CHECKING, cast
 
-from asgiref.typing import (
-    ASGI3Application,
-    ASGIReceiveEvent,
-    ASGISendEvent,
-    ASGIVersions,
-    HTTPDisconnectEvent,
-    HTTPRequestEvent,
-    HTTPResponseBodyEvent,
-    HTTPResponseStartEvent,
-    HTTPResponseTrailersEvent,
-    HTTPScope,
-)
+if TYPE_CHECKING:
+    from asgiref.typing import (
+        ASGI3Application,
+        ASGIReceiveEvent,
+        ASGISendEvent,
+        HTTPResponseBodyEvent,
+        HTTPResponseStartEvent,
+        HTTPResponseTrailersEvent,
+        HTTPScope,
+    )
 
 from favicorn.connections.http.controller_events import (
     HTTPControllerReceiveEvent,
@@ -37,7 +35,7 @@ class ASGIResponseEvents(enum.Enum):
 
 
 class HTTPASGIController(IHTTPController):
-    app: ASGI3Application
+    app: "ASGI3Application"
     task: asyncio.Task[Any] | None
     response_metadata: ResponseMetadata | None
     expected_event: ASGIResponseEvents | None
@@ -50,7 +48,7 @@ class HTTPASGIController(IHTTPController):
 
     def __init__(
         self,
-        app: ASGI3Application,
+        app: "ASGI3Application",
         parser: IHTTPParser,
         serializer: IHTTPSerializer,
         event_bus: IHTTPEventBus,
@@ -83,21 +81,21 @@ class HTTPASGIController(IHTTPController):
         if metadata is not None:
             self.logger.debug(f"ASGIController receives metadata: {metadata}")
             self.request_path = metadata.path
-            scope = HTTPScope(
-                type="http",
-                scheme="http",
-                path=metadata.path,
-                asgi=ASGIVersions(spec_version="2.3", version="3.0"),
-                http_version=metadata.http_version,
-                raw_path=metadata.raw_path,
-                query_string=metadata.query_string or b"",
-                headers=metadata.headers,
-                root_path="",
-                server=None,
-                client=self.client,
-                extensions={},
-                method=metadata.method,
-            )
+            scope: "HTTPScope" = {
+                "type": "http",
+                "scheme": "http",
+                "path": metadata.path,
+                "asgi": {"spec_version": "2.3", "version": "3.0"},
+                "http_version": metadata.http_version,
+                "raw_path": metadata.raw_path,
+                "query_string": metadata.query_string or b"",
+                "headers": metadata.headers,
+                "root_path": "",
+                "server": None,
+                "client": self.client,
+                "extensions": {},
+                "method": metadata.method,
+            }
             self.logger.debug(f"ASGIController builds scope: {scope}")
             self.task = asyncio.create_task(self.main(scope))
             self.logger.debug("ASGIApplication task is scheduled")
@@ -142,18 +140,18 @@ class HTTPASGIController(IHTTPController):
             self.logger.exception("ASGICallable raised an exception")
             await self.send_500_response()
 
-    async def receive(self) -> ASGIReceiveEvent:
+    async def receive(self) -> "ASGIReceiveEvent":
         if not self.parser.has_body():
             if data := await self.receive_from_connection():
                 self.parser.feed_data(data)
         data = self.parser.get_body()
         if data is None:
-            return HTTPDisconnectEvent(type="http.disconnect")
-        return HTTPRequestEvent(
-            type="http.request",
-            body=data,
-            more_body=self.parser.is_more_body(),
-        )
+            return {"type": "http.disconnect"}
+        return {
+            "type": "http.request",
+            "body": data,
+            "more_body": self.parser.is_more_body(),
+        }
 
     async def send_500_response(self) -> None:
         content = b"Internal Server Error"
@@ -178,7 +176,7 @@ class HTTPASGIController(IHTTPController):
         self.validate_event_type(event["type"])
         match ASGIResponseEvents(event["type"]):
             case ASGIResponseEvents.START:
-                event = cast(HTTPResponseStartEvent, event)
+                event = cast("HTTPResponseStartEvent", event)
                 self.response_metadata = ResponseMetadata(
                     status=event["status"],
                     headers=event["headers"],
@@ -200,7 +198,7 @@ class HTTPASGIController(IHTTPController):
                 assert (
                     self.response_metadata is not None
                 ), "ResponseMetadata is not defined yet"
-                event = cast(HTTPResponseTrailersEvent, event)
+                event = cast("HTTPResponseTrailersEvent", event)
                 more_trailers = event.get("more_trailers", False)
                 self.response_metadata.add_extra_headers(event["headers"])
                 if more_trailers is False:
@@ -213,7 +211,7 @@ class HTTPASGIController(IHTTPController):
                         )
                     )
             case ASGIResponseEvents.BODY:
-                event = cast(HTTPResponseBodyEvent, event)
+                event = cast("HTTPResponseBodyEvent", event)
                 more_body = event.get("more_body", False)
                 self.event_bus.dispatch_event(
                     HTTPControllerSendEvent(
