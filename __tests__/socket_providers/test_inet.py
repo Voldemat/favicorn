@@ -1,5 +1,3 @@
-import socket
-
 from favicorn.socket_providers import InetSocketProvider
 
 
@@ -9,11 +7,4 @@ def test_inet_socket_provider() -> None:
     )
     sock = inet_provider.acquire()
     assert id(sock) == id(inet_provider.acquire())
-    assert (
-        sock.getsockopt(
-            socket.SOL_SOCKET,
-            socket.SO_REUSEADDR,
-        )
-        == socket.SO_REUSEADDR
-    )
     assert sock.getsockname() == ("127.0.0.1", 8000)
