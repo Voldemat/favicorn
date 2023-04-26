@@ -1,6 +1,6 @@
-import asyncio
-
 from favicorn.iconnection import IConnection, IConnectionFactory
+from favicorn.reader import SocketReader
+from favicorn.writer import SocketWriter
 
 from .connection import HTTPConnection
 from .icontroller import IHTTPControllerFactory
@@ -15,8 +15,8 @@ class HTTPConnectionFactory(IConnectionFactory):
 
     def build(
         self,
-        reader: asyncio.StreamReader,
-        writer: asyncio.StreamWriter,
+        reader: SocketReader,
+        writer: SocketWriter,
     ) -> IConnection:
         return HTTPConnection(
             self.controller_factory,

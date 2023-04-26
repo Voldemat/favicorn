@@ -1,5 +1,7 @@
-import asyncio
 from abc import ABC, abstractmethod
+
+from .reader import SocketReader
+from .writer import SocketWriter
 
 
 class IConnection(ABC):
@@ -20,7 +22,7 @@ class IConnectionFactory(ABC):
     @abstractmethod
     def build(
         self,
-        reader: asyncio.StreamReader,
-        writer: asyncio.StreamWriter,
+        reader: SocketReader,
+        writer: SocketWriter,
     ) -> IConnection:
         raise NotImplementedError

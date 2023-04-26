@@ -1,6 +1,8 @@
 import asyncio
 
 from .iconnection import IConnectionFactory
+from .reader import SocketReader
+from .writer import SocketWriter
 
 
 class ConnectionManager:
@@ -12,9 +14,13 @@ class ConnectionManager:
 
     async def handler(
         self,
-        reader: asyncio.StreamReader,
-        writer: asyncio.StreamWriter,
+        stream_reader: asyncio.StreamReader,
+        stream_writer: asyncio.StreamWriter,
     ) -> None:
+        reader = SocketReader(
+            stream_reader=stream_reader, default_read_count=4028
+        )
+        writer = SocketWriter(stream_writer=stream_writer)
         connection = self.connection_factory.build(
             reader,
             writer,
