@@ -31,9 +31,8 @@ class HTTPASGIControllerFactory(IHTTPControllerFactory):
         self.event_bus_factory = event_bus_factory
         self.serializer_factory = serializer_factory
 
-    def build(self, client: tuple[str, int] | None) -> IHTTPController:
+    def build(self) -> IHTTPController:
         return HTTPASGIController(
-            client=client,
             app=self.app,
             logger=self.logger,
             parser=self.parser_factory.build(),

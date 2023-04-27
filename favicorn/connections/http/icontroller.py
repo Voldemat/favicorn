@@ -7,7 +7,7 @@ class IHTTPController(ABC):
     @abstractmethod
     async def start(
         self,
-        initial_data: bytes | None,
+        client: tuple[str, int] | None,
     ) -> IHTTPEventBus:
         raise NotImplementedError
 
@@ -22,5 +22,5 @@ class IHTTPController(ABC):
 
 class IHTTPControllerFactory(ABC):
     @abstractmethod
-    def build(self, client: tuple[str, int] | None) -> IHTTPController:
+    def build(self) -> IHTTPController:
         raise NotImplementedError

@@ -39,7 +39,6 @@ class HTTPASGIController(IHTTPController):
     task: asyncio.Task[Any] | None
     response_metadata: ResponseMetadata | None
     expected_event: ASGIResponseEvents | None
-    client: tuple[str, int] | None
     parser: IHTTPParser
     event_bus: IHTTPEventBus
     serializer: IHTTPSerializer
@@ -52,11 +51,9 @@ class HTTPASGIController(IHTTPController):
         parser: IHTTPParser,
         serializer: IHTTPSerializer,
         event_bus: IHTTPEventBus,
-        client: tuple[str, int] | None,
         logger: logging.Logger,
     ) -> None:
         self.app = app
-        self.client = client
         self.parser = parser
         self.logger = logger
         self.event_bus = event_bus
@@ -67,50 +64,11 @@ class HTTPASGIController(IHTTPController):
         self.response_metadata = None
         self.expected_event = ASGIResponseEvents.START
 
-    async def start(
-        self,
-        initial_data: bytes | None,
-    ) -> IHTTPEventBus:
-        try:
-            metadata = await self.wait_for_metadata(initial_data)
-        except HTTPParsingException:
-            self.logger.exception(
-                "ASGIController couldn`t obtain RequestMetadata"
-            )
-            metadata = None
-        if metadata is not None:
-            self.logger.debug(f"ASGIController receives metadata: {metadata}")
-            self.request_path = metadata.path
-            scope: "HTTPScope" = {
-                "type": "http",
-                "scheme": "http",
-                "path": metadata.path,
-                "asgi": {"spec_version": "2.3", "version": "3.0"},
-                "http_version": metadata.http_version,
-                "raw_path": metadata.raw_path,
-                "query_string": metadata.query_string or b"",
-                "headers": metadata.headers,
-                "root_path": "",
-                "server": None,
-                "client": self.client,
-                "extensions": {},
-                "method": metadata.method,
-            }
-            self.logger.debug(f"ASGIController builds scope: {scope}")
-            self.task = asyncio.create_task(self.main(scope))
-            self.logger.debug("ASGIApplication task is scheduled")
-        else:
-            self.logger.error(
-                "ASGIApplication couldn`t obtain RequestMetadata"
-            )
-            self.event_bus.close()
+    async def start(self, client: tuple[str, int] | None) -> IHTTPEventBus:
+        self.task = asyncio.create_task(self.main(client))
         return self.event_bus
 
-    async def wait_for_metadata(
-        self, initial_data: bytes | None
-    ) -> RequestMetadata | None:
-        if initial_data is not None:
-            self.parser.feed_data(initial_data)
+    async def wait_for_metadata(self) -> RequestMetadata | None:
         while not self.parser.is_metadata_ready():
             data = await self.receive_from_connection()
             if data is None:
@@ -133,8 +91,50 @@ class HTTPASGIController(IHTTPController):
         except asyncio.CancelledError:
             pass
 
-    async def main(self, scope: HTTPScope) -> None:
+    async def build_asgi_scope(
+        self, client: tuple[str, int] | None
+    ) -> "HTTPScope" | None:
         try:
+            metadata = await self.wait_for_metadata()
+        except HTTPParsingException:
+            self.logger.exception(
+                "ASGIController couldn`t obtain RequestMetadata"
+            )
+            metadata = None
+        if metadata is not None:
+            self.logger.debug(f"ASGIController receives metadata: {metadata}")
+            self.request_path = metadata.path
+            scope: "HTTPScope" = {
+                "type": "http",
+                "scheme": "http",
+                "path": metadata.path,
+                "asgi": {"spec_version": "2.3", "version": "3.0"},
+                "http_version": metadata.http_version,
+                "raw_path": metadata.raw_path,
+                "query_string": metadata.query_string or b"",
+                "headers": metadata.headers,
+                "root_path": "",
+                "server": None,
+                "client": client,
+                "extensions": {},
+                "method": metadata.method,
+            }
+            self.logger.debug(f"ASGIController builds scope: {scope}")
+            return scope
+        else:
+            self.logger.error(
+                "ASGIApplication couldn`t obtain RequestMetadata"
+            )
+            self.event_bus.close()
+            return None
+
+    async def main(self, client: tuple[str, int] | None) -> None:
+        try:
+            scope = await self.build_asgi_scope(client)
+            if scope is None:
+                raise RuntimeError(
+                    "ASGIApplication couldn`t obtain RequestMetadata"
+                )
             await self.app(scope, self.receive, self.send)
         except BaseException:
             self.logger.exception("ASGICallable raised an exception")

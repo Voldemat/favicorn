@@ -25,20 +25,20 @@ class HTTPConnection(IConnection):
         self.keepalive_timeout_s = keepalive_timeout_s
 
     async def init(self) -> None:
-        await self.process_request()
+        pass
 
     async def main(self) -> None:
+        await self.process_request()
         while self.keepalive:
-            if data := await self.reader.read(
-                timeout=self.keepalive_timeout_s
-            ):
-                await self.process_request(data)
+            if await self.reader.wait(timeout=self.keepalive_timeout_s):
+                await self.process_request()
             else:
                 self.keepalive = False
 
-    async def process_request(self, data: bytes | None = None) -> None:
-        controller = self.controller_factory.build(client=self.client)
-        event_bus = await controller.start(initial_data=data)
+    async def process_request(self) -> None:
+        controller = self.controller_factory.build()
+        event_bus = await controller.start(client=self.client)
+        print(event_bus)
         async for event in event_bus:
             if isinstance(event, HTTPControllerReceiveEvent):
                 event_bus.send(await self.reader.read(count=event.count))
