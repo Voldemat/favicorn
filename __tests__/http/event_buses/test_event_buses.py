@@ -16,7 +16,7 @@ async def test_event_bus(
     event_bus_factory: IHTTPEventBusFactory,
 ) -> None:
     event_bus = event_bus_factory.build()
-    receive_event = HTTPControllerReceiveEvent()
+    receive_event = HTTPControllerReceiveEvent(count=None, timeout=None)
     event_bus.dispatch_event(receive_event)
     assert receive_event == await event_bus.__anext__()
     data = b"something"

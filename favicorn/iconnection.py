@@ -6,10 +6,6 @@ from .writer import SocketWriter
 
 class IConnection(ABC):
     @abstractmethod
-    async def init(self) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
     async def main(self) -> None:
         raise NotImplementedError
 

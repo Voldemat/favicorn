@@ -79,7 +79,9 @@ class HTTPASGIController(IHTTPController):
         return self.parser.get_metadata()
 
     async def receive_from_connection(self) -> bytes | None:
-        self.event_bus.dispatch_event(HTTPControllerReceiveEvent())
+        self.event_bus.dispatch_event(
+            HTTPControllerReceiveEvent(count=None, timeout=None)
+        )
         return await self.event_bus.receive()
 
     async def stop(self) -> None:

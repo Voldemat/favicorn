@@ -25,7 +25,6 @@ class ConnectionManager:
             reader,
             writer,
         )
-        await connection.init()
         try:
             await connection.main()
         finally:

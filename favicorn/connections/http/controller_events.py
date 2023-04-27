@@ -3,7 +3,8 @@ from dataclasses import dataclass
 
 @dataclass
 class HTTPControllerReceiveEvent:
-    count: int | None = None
+    count: int | None
+    timeout: float | None
 
 
 @dataclass
