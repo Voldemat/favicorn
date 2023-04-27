@@ -25,12 +25,10 @@ class HTTPConnection(IConnection):
         self.keepalive_timeout_s = keepalive_timeout_s
 
     async def main(self) -> None:
-        await self.process_request()
-        while self.keepalive:
-            if await self.reader.wait(timeout=self.keepalive_timeout_s):
-                await self.process_request()
-            else:
-                self.keepalive = False
+        while self.keepalive and await self.reader.wait(
+            timeout=self.keepalive_timeout_s
+        ):
+            await self.process_request()
 
     async def process_request(self) -> None:
         controller = self.controller_factory.build()
