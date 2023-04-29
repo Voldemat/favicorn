@@ -18,6 +18,7 @@ class H11HTTPParser(IHTTPParser):
     query_string: bytes | None
     body: bytes | None
     connection_header: str | None
+    more_body: bool
 
     def __init__(self, h11: ModuleType) -> None:
         self.h11 = h11
@@ -30,6 +31,7 @@ class H11HTTPParser(IHTTPParser):
         self.http_version = None
         self.query_string = None
         self.connection_header = None
+        self.more_body = True
 
     def feed_data(self, data: bytes) -> None:
         self.parser.receive_data(data)
@@ -56,6 +58,7 @@ class H11HTTPParser(IHTTPParser):
         elif isinstance(event, self.h11.Data):
             self.set_body(event.data)
         elif isinstance(event, self.h11.EndOfMessage):
+            self.more_body = False
             if self.body is None:
                 self.set_body(b"")
             return
@@ -122,7 +125,7 @@ class H11HTTPParser(IHTTPParser):
         return body
 
     def is_more_body(self) -> bool:
-        return False
+        return self.more_body
 
     def is_keepalive(self) -> bool:
         if self.connection_header == "keep-alive":

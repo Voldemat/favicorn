@@ -23,13 +23,37 @@ async def test_parse_request(
     parser = parser_factory.build()
     assert not parser.is_metadata_ready()
     parser.feed_data(t_request.request_bytes)
-    error = parser.get_error()
-    assert error is None
+    assert parser.get_error() is None
     assert parser.is_metadata_ready()
     metadata = parser.get_metadata()
     assert_metadata_equals(metadata, t_request.expected_metadata)
     assert parser.get_body() == t_request.expected_body
     assert parser.is_more_body() is False
+
+
+@pytest.mark.parametrize("parser_factory", parser_factories)
+@pytest.mark.parametrize("t_request", test_requests)
+async def test_parse_request_in_two_batches(
+    parser_factory: IHTTPParserFactory,
+    t_request: TestRequest,
+) -> None:
+    parser = parser_factory.build()
+    assert not parser.is_metadata_ready()
+    metadata_bytes, body_bytes = t_request.request_bytes.split(b"\r\n\r\n")
+    first_batch = metadata_bytes[:-5]
+    second_batch = (
+        metadata_bytes[len(metadata_bytes) - 5 :] + b"\r\n\r\n" + body_bytes
+    )
+    parser.feed_data(first_batch)
+    assert parser.get_error() is None
+    assert not parser.is_metadata_ready()
+    assert parser.is_more_body()
+    parser.feed_data(second_batch)
+    assert parser.get_error() is None
+    assert parser.is_metadata_ready()
+    assert_metadata_equals(parser.get_metadata(), t_request.expected_metadata)
+    assert parser.get_body() == t_request.expected_body
+    assert not parser.is_more_body()
 
 
 @pytest.mark.parametrize(
