@@ -25,8 +25,10 @@ class HTTPConnection(IConnection):
         self.keepalive_timeout_s = keepalive_timeout_s
 
     async def main(self) -> None:
-        while self.keepalive and await self.reader.wait(
-            timeout=self.keepalive_timeout_s
+        while (
+            not self.writer.is_closing()
+            and self.keepalive
+            and await self.reader.wait(timeout=self.keepalive_timeout_s)
         ):
             await self.process_request()
 
@@ -35,7 +37,7 @@ class HTTPConnection(IConnection):
         event_bus = await controller.start(client=self.client)
         async for event in event_bus:
             if isinstance(event, HTTPControllerReceiveEvent):
-                event_bus.send(
+                event_bus.provide_for_receive(
                     await self.reader.read(
                         count=event.count, timeout=event.timeout
                     )
@@ -44,9 +46,8 @@ class HTTPConnection(IConnection):
                 self.writer.write(event.data)
             else:
                 raise ValueError(f"Unhandled event type {type(event)}")
-        self.keepalive = (
-            not self.writer.is_closing() and controller.is_keepalive()
-        )
+        self.keepalive = controller.is_keepalive()
+        await controller.stop()
         await self.writer.flush()
 
     async def close(self) -> None:

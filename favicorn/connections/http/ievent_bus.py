@@ -6,15 +6,17 @@ from .controller_events import HTTPControllerEvent
 
 class IHTTPEventBus(ABC, AsyncGenerator[HTTPControllerEvent, None]):
     @abstractmethod
-    def dispatch_event(self, event: HTTPControllerEvent) -> None:
+    def send(self, data: bytes) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def send(self, data: bytes | None) -> None:
+    async def receive(
+        self, count: int | None = None, timeout: float | None = None
+    ) -> bytes | None:
         raise NotImplementedError
 
     @abstractmethod
-    async def receive(self) -> bytes | None:
+    def provide_for_receive(self, data: bytes | None) -> None:
         raise NotImplementedError
 
     @abstractmethod

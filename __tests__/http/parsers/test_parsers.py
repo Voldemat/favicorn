@@ -22,14 +22,12 @@ async def test_parse_request(
 ) -> None:
     parser = parser_factory.build()
     assert not parser.is_metadata_ready()
-    assert not parser.has_body()
-    assert not parser.has_error()
     parser.feed_data(t_request.request_bytes)
-    assert not parser.has_error(), parser.get_error()
+    error = parser.get_error()
+    assert error is None
     assert parser.is_metadata_ready()
     metadata = parser.get_metadata()
     assert_metadata_equals(metadata, t_request.expected_metadata)
-    assert parser.has_body()
     assert parser.get_body() == t_request.expected_body
     assert parser.is_more_body() is False
 
@@ -59,16 +57,13 @@ async def test_raise_error_on_h11_request_with_invalid_host(
 ) -> None:
     parser = parser_factory.build()
     assert not parser.is_metadata_ready()
-    assert not parser.has_body()
-    assert not parser.has_error()
     parser.feed_data(request_bytes)
     if expected_error is not None:
-        assert parser.has_error()
         exception = parser.get_error()
         assert isinstance(exception, HTTPParsingException), exception
         assert str(exception) == expected_error, exception
     else:
-        assert not parser.has_error(), parser.get_error()
+        error = parser.get_error()
+        assert error is None
         assert parser.is_metadata_ready()
-        assert parser.has_body()
         assert parser.get_body() == b""

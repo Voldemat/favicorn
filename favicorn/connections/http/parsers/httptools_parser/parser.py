@@ -92,20 +92,12 @@ class HTTPToolsParser(IHTTPParser):
             self.state.body = b""
         self.state.more_body = False
 
-    def has_error(self) -> bool:
-        return self.error is not None
-
-    def get_error(self) -> HTTPParsingException:
-        assert self.error is not None
+    def get_error(self) -> HTTPParsingException | None:
         return self.error
 
-    def has_body(self) -> bool:
-        return self.state.body is not None
-
-    def get_body(self) -> bytes:
+    def get_body(self) -> bytes | None:
         body = self.state.body
         self.state.body = None
-        assert body is not None
         return body
 
     def is_metadata_ready(self) -> bool:

@@ -2,7 +2,11 @@ import asyncio
 from collections import deque
 from typing import Any, AsyncGenerator
 
-from ..controller_events import HTTPControllerEvent
+from ..controller_events import (
+    HTTPControllerEvent,
+    HTTPControllerReceiveEvent,
+    HTTPControllerSendEvent,
+)
 from ..ievent_bus import IHTTPEventBus, IHTTPEventBusFactory
 
 
@@ -18,23 +22,20 @@ class HTTPDequeEventBus(IHTTPEventBus):
         self.provider_event = asyncio.Event()
         self.controller_event = asyncio.Event()
 
-    def send(self, data: bytes | None) -> None:
-        self.provider_queue.append(data)
-        self.provider_event.set()
+    def send(self, data: bytes) -> None:
+        self.push_to_controller_queue(HTTPControllerSendEvent(data=data))
 
-    async def receive(self) -> bytes | None:
+    async def receive(
+        self, count: int | None = None, timeout: float | None = None
+    ) -> bytes | None:
+        self.push_to_controller_queue(
+            HTTPControllerReceiveEvent(count=count, timeout=timeout)
+        )
         await self.provider_event.wait()
         if len(self.provider_queue) != 0:
             return self.provider_queue.popleft()
         self.provider_event.clear()
-        return await self.receive()
-
-    def dispatch_event(self, event: HTTPControllerEvent) -> None:
-        self._dispatch_event(event)
-
-    def _dispatch_event(self, event: HTTPControllerEvent | None) -> None:
-        self.controller_queue.append(event)
-        self.controller_event.set()
+        return await self.receive(count=count, timeout=timeout)
 
     def __aiter__(self) -> AsyncGenerator[HTTPControllerEvent, None]:
         return self
@@ -48,6 +49,19 @@ class HTTPDequeEventBus(IHTTPEventBus):
     async def athrow(self, *args: Any, **kwargs: Any) -> HTTPControllerEvent:
         return await super().athrow(*args, **kwargs)
 
+    def provide_for_receive(self, data: bytes | None) -> None:
+        self.push_to_provider_queue(data)
+
+    def push_to_provider_queue(self, data: bytes | None) -> None:
+        self.provider_queue.append(data)
+        self.provider_event.set()
+
+    def push_to_controller_queue(
+        self, event: HTTPControllerEvent | None
+    ) -> None:
+        self.controller_queue.append(event)
+        self.controller_event.set()
+
     async def get_event(self) -> HTTPControllerEvent | None:
         await self.controller_event.wait()
         if len(self.controller_queue) != 0:
@@ -56,7 +70,7 @@ class HTTPDequeEventBus(IHTTPEventBus):
         return await self.get_event()
 
     def close(self) -> None:
-        self._dispatch_event(None)
+        self.push_to_controller_queue(None)
 
 
 class HTTPDequeEventBusFactory(IHTTPEventBusFactory):

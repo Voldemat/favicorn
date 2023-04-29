@@ -113,18 +113,10 @@ class H11HTTPParser(IHTTPParser):
             query_string=self.query_string,
         )
 
-    def has_error(self) -> bool:
-        return self.error is not None
-
-    def get_error(self) -> HTTPParsingException:
-        assert self.error is not None
+    def get_error(self) -> HTTPParsingException | None:
         return self.error
 
-    def has_body(self) -> bool:
-        return self.body is not None
-
-    def get_body(self) -> bytes:
-        assert self.body is not None
+    def get_body(self) -> bytes | None:
         body = self.body
         self.body = None
         return body

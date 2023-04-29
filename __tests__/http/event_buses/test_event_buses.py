@@ -16,17 +16,20 @@ async def test_event_bus(
     event_bus_factory: IHTTPEventBusFactory,
 ) -> None:
     event_bus = event_bus_factory.build()
-    receive_event = HTTPControllerReceiveEvent(count=None, timeout=None)
-    event_bus.dispatch_event(receive_event)
-    assert receive_event == await event_bus.__anext__()
+    receive_task = asyncio.create_task(event_bus.receive())
+    empty_receive_event = HTTPControllerReceiveEvent(count=None, timeout=None)
+    assert empty_receive_event == await event_bus.__anext__()
     data = b"something"
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(event_bus.receive(), timeout=0.1)
-    event_bus.send(data)
-    assert data == await event_bus.receive()
-    send_event = HTTPControllerSendEvent(data=b"asdkmlkasd")
-    event_bus.dispatch_event(send_event)
-    assert send_event == await event_bus.__anext__()
+    assert empty_receive_event == await event_bus.__anext__()
+    event_bus.provide_for_receive(data)
+    assert data == await receive_task
+    send_data = b"asdkmlkasd"
+    event_bus.send(data=send_data)
+    assert (
+        HTTPControllerSendEvent(data=send_data) == await event_bus.__anext__()
+    )
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(event_bus.__anext__(), timeout=0.1)
 

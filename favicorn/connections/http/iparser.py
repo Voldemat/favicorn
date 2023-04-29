@@ -21,19 +21,11 @@ class IHTTPParser(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def has_error(self) -> bool:
+    def get_error(self) -> HTTPParsingException | None:
         raise NotImplementedError
 
     @abstractmethod
-    def get_error(self) -> HTTPParsingException:
-        raise NotImplementedError
-
-    @abstractmethod
-    def has_body(self) -> bool:
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_body(self) -> bytes:
+    def get_body(self) -> bytes | None:
         raise NotImplementedError
 
     @abstractmethod
