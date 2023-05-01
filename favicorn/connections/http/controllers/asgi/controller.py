@@ -13,7 +13,7 @@ if TYPE_CHECKING:
         HTTPResponseBodyEvent,
         HTTPResponseStartEvent,
         HTTPResponseTrailersEvent,
-        HTTPScope,
+        WWWScope,
     )
 
 from favicorn.connections.http.icontroller import IHTTPController
@@ -23,7 +23,12 @@ from favicorn.connections.http.iserializer import IHTTPSerializer
 from favicorn.connections.http.request_metadata import RequestMetadata
 from favicorn.connections.http.response_metadata import ResponseMetadata
 
-from .responses import PredefinedResponse, RESPONSE_400, RESPONSE_500
+from .responses import (
+    PredefinedResponse,
+    RESPONSE_400,
+    RESPONSE_500,
+    RESPONSE_WEBSOCKETS_IS_NOT_SUPPORTED,
+)
 from .scope_builder import ASGIScopeBuilder
 
 
@@ -43,6 +48,7 @@ class HTTPASGIController(IHTTPController):
     serializer: IHTTPSerializer
     logger: logging.Logger
     request_path: str | None
+    scope: "WWWScope" | None
 
     def __init__(
         self,
@@ -58,6 +64,7 @@ class HTTPASGIController(IHTTPController):
         self.event_bus = event_bus
         self.serializer = serializer
         self.request_path = None
+        self.scope = None
 
         self.task = None
         self.response_metadata = None
@@ -69,10 +76,12 @@ class HTTPASGIController(IHTTPController):
 
     async def main(self, client: tuple[str, int] | None) -> None:
         try:
-            if scope := await self.build_asgi_scope(client):
-                await self.app(scope, self.receive, self.send)
+            result = await self.build_asgi_scope(client)
+            if result[0] is None:
+                await self.send_predefined_response(result[1])
             else:
-                await self.send_predefined_response(RESPONSE_400)
+                self.scope = result[0]
+                await self.app(result[0], self.receive, self.send)
         except BaseException:
             self.logger.exception("ASGICallable raised an exception")
             await self.send_predefined_response(RESPONSE_500)
@@ -81,19 +90,19 @@ class HTTPASGIController(IHTTPController):
 
     async def build_asgi_scope(
         self, client: tuple[str, int] | None
-    ) -> "HTTPScope" | None:
+    ) -> tuple["WWWScope", None] | tuple[None, PredefinedResponse]:
         metadata = await self.wait_for_metadata()
         if metadata is None:
-            return None
+            return (None, RESPONSE_400)
         self.logger.debug(f"ASGIController receives metadata: {metadata}")
         self.request_path = metadata.path
         scope = self.scope_builder.build(metadata, client)
         if scope["type"] == "http":
             self.expected_event = ASGISendEventType.HTTP_START
         else:
-            return None
+            return (None, RESPONSE_WEBSOCKETS_IS_NOT_SUPPORTED)
         self.logger.debug(f"ASGIController builds scope: {scope}")
-        return scope
+        return (scope, None)
 
     async def wait_for_metadata(self) -> RequestMetadata | None:
         while not self.http_parser.is_metadata_ready():

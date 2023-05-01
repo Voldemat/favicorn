@@ -32,3 +32,22 @@ RESPONSE_500 = PredefinedResponse(
     ),
     body=RESPONSE_CONTENT_500,
 )
+
+RESPONSE_CONTENT_WEBSOCKETS_IS_NOT_SUPPORTED = (
+    b"Websockets protocol is not supported"
+)
+RESPONSE_WEBSOCKETS_IS_NOT_SUPPORTED = PredefinedResponse(
+    metadata=ResponseMetadata(
+        status=400,
+        headers=(
+            (b"Content-Type", b"text/plain; charset=utf-8"),
+            (
+                b"Content-Length",
+                str(
+                    len(RESPONSE_CONTENT_WEBSOCKETS_IS_NOT_SUPPORTED)
+                ).encode(),
+            ),
+        ),
+    ),
+    body=RESPONSE_CONTENT_WEBSOCKETS_IS_NOT_SUPPORTED,
+)
