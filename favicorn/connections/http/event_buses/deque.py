@@ -22,6 +22,16 @@ class HTTPDequeEventBus(IHTTPEventBus):
         self.provider_event = asyncio.Event()
         self.controller_event = asyncio.Event()
 
+    def push_to_controller_queue(
+        self, event: HTTPControllerEvent | None
+    ) -> None:
+        self.controller_queue.append(event)
+        self.controller_event.set()
+
+    def push_to_provider_queue(self, data: bytes | None) -> None:
+        self.provider_queue.append(data)
+        self.provider_event.set()
+
     def send(self, data: bytes) -> None:
         self.push_to_controller_queue(HTTPControllerSendEvent(data=data))
 
@@ -46,22 +56,6 @@ class HTTPDequeEventBus(IHTTPEventBus):
             raise StopAsyncIteration()
         return event
 
-    async def athrow(self, *args: Any, **kwargs: Any) -> HTTPControllerEvent:
-        return await super().athrow(*args, **kwargs)
-
-    def provide_for_receive(self, data: bytes | None) -> None:
-        self.push_to_provider_queue(data)
-
-    def push_to_provider_queue(self, data: bytes | None) -> None:
-        self.provider_queue.append(data)
-        self.provider_event.set()
-
-    def push_to_controller_queue(
-        self, event: HTTPControllerEvent | None
-    ) -> None:
-        self.controller_queue.append(event)
-        self.controller_event.set()
-
     async def get_event(self) -> HTTPControllerEvent | None:
         await self.controller_event.wait()
         if len(self.controller_queue) != 0:
@@ -69,8 +63,14 @@ class HTTPDequeEventBus(IHTTPEventBus):
         self.controller_event.clear()
         return await self.get_event()
 
+    def provide_for_receive(self, data: bytes | None) -> None:
+        self.push_to_provider_queue(data)
+
     def close(self) -> None:
         self.push_to_controller_queue(None)
+
+    async def athrow(self, *args: Any, **kwargs: Any) -> HTTPControllerEvent:
+        return await super().athrow(*args, **kwargs)
 
 
 class HTTPDequeEventBusFactory(IHTTPEventBusFactory):

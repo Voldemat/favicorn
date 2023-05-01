@@ -33,8 +33,8 @@ class HTTPConnection(IConnection):
             await self.process_request()
 
     async def process_request(self) -> None:
-        controller = self.controller_factory.build()
-        event_bus = await controller.start(client=self.client)
+        controller, event_bus = self.controller_factory.build()
+        await controller.start(client=self.client)
         async for event in event_bus:
             if isinstance(event, HTTPControllerReceiveEvent):
                 event_bus.provide_for_receive(
