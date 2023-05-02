@@ -78,13 +78,13 @@ class HTTPASGIController(IHTTPController):
         try:
             result = await self.build_asgi_scope(client)
             if result[0] is None:
-                await self.send_predefined_response(result[1])
+                self.send_predefined_response(result[1])
             else:
                 self.scope = result[0]
                 await self.app(result[0], self.receive, self.send)
         except BaseException:
             self.logger.exception("ASGICallable raised an exception")
-            await self.send_predefined_response(RESPONSE_500)
+            self.send_predefined_response(RESPONSE_500)
         finally:
             self.event_bus.close()
 
@@ -180,9 +180,7 @@ class HTTPASGIController(IHTTPController):
     def log_response(self, status: int) -> None:
         self.logger.info(f"[{status}] - {self.request_path}")
 
-    async def send_predefined_response(
-        self, response: PredefinedResponse
-    ) -> None:
+    def send_predefined_response(self, response: PredefinedResponse) -> None:
         data = self.serializer.serialize_metadata(
             response.metadata
         ) + self.serializer.serialize_body(response.body)

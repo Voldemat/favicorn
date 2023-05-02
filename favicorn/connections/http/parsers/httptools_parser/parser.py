@@ -48,6 +48,8 @@ class HTTPParserState:
             self.request_connection_close = value.decode().lower() == "close"
 
     def is_keepalive(self) -> bool:
+        if not self.is_metadata_ready():
+            return False
         if self.request_connection_close is None:
             return self.http_version != "1.0"
         return self.request_connection_close is False
@@ -113,4 +115,7 @@ class HTTPToolsParser(IHTTPParser):
         return self.state.more_body
 
     def feed_data(self, data: bytes) -> None:
-        self.parser.feed_data(data)
+        try:
+            self.parser.feed_data(data)
+        except self.httptools.HttpParserInvalidMethodError:
+            self.error = HTTPParsingException("Invalid method encountered")

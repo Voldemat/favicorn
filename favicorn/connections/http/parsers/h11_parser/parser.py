@@ -128,6 +128,8 @@ class H11HTTPParser(IHTTPParser):
         return self.more_body
 
     def is_keepalive(self) -> bool:
+        if not self.is_metadata_ready():
+            return False
         if self.connection_header == "keep-alive":
             return True
         if self.connection_header == "close":

@@ -36,3 +36,16 @@ async def test_event_bus(
     event_bus.close()
     with pytest.raises(StopAsyncIteration):
         await event_bus.__anext__()
+
+
+@pytest.mark.parametrize("event_bus_factory", event_bus_factories)
+async def test_event_bus_dont_closes_when_have_pending_events(
+    event_bus_factory: IHTTPEventBusFactory,
+) -> None:
+    event_bus = event_bus_factory.build()
+    data = b"somefin"
+    event_bus.send(b"somefin")
+    event_bus.close()
+    assert HTTPControllerSendEvent(data) == await event_bus.__anext__()
+    with pytest.raises(StopAsyncIteration):
+        await event_bus.__anext__()

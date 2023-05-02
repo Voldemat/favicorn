@@ -1,7 +1,5 @@
 import asyncio
 
-from .utils import get_remote_addr
-
 
 class SocketWriter:
     stream_writer: asyncio.StreamWriter
@@ -21,7 +19,12 @@ class SocketWriter:
         return self.stream_writer.is_closing()
 
     def get_address(self) -> tuple[str, int] | None:
-        return get_remote_addr(self.stream_writer)
+        if socket_info := self.stream_writer.get_extra_info("socket"):
+            if info := socket_info.getpeername():
+                return (str(info[0]), int(info[1]))
+        if info := self.stream_writer.get_extra_info("peername"):
+            return (str(info[0]), int(info[1]))
+        return None
 
     async def close(self) -> None:
         if self.stream_writer.is_closing():
