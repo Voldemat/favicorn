@@ -37,22 +37,12 @@ class HTTPParserState:
             path=url.path.decode(),
             query_string=url.query,
             http_version=self.http_version,
-            is_keepalive=self.is_keepalive(),
         )
 
     def add_header(self, name: bytes, value: bytes) -> None:
         self.headers.append(
             (name.decode().lower().encode(), value.decode().lower().encode())
         )
-        if name.decode().lower() == "connection":
-            self.request_connection_close = value.decode().lower() == "close"
-
-    def is_keepalive(self) -> bool:
-        if not self.is_metadata_ready():
-            return False
-        if self.request_connection_close is None:
-            return self.http_version != "1.0"
-        return self.request_connection_close is False
 
 
 class HTTPToolsParser(IHTTPParser):
@@ -107,9 +97,6 @@ class HTTPToolsParser(IHTTPParser):
 
     def get_metadata(self) -> RequestMetadata:
         return self.state.get_metadata(self.httptools)
-
-    def is_keepalive(self) -> bool:
-        return self.state.is_keepalive()
 
     def is_more_body(self) -> bool:
         return self.state.more_body

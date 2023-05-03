@@ -69,6 +69,7 @@ class HTTPASGIController(IHTTPController):
         self.task = None
         self.response_metadata = None
         self.expected_event = None
+        self._is_keepalive = False
         self.scope_builder = ASGIScopeBuilder()
 
     async def start(self, client: tuple[str, int] | None) -> None:
@@ -96,6 +97,7 @@ class HTTPASGIController(IHTTPController):
             return (None, RESPONSE_400)
         self.logger.debug(f"ASGIController receives metadata: {metadata}")
         self.request_path = metadata.path
+        self._is_keepalive = metadata.is_keepalive()
         scope = self.scope_builder.build(metadata, client)
         if scope["type"] == "http":
             self.expected_event = ASGISendEventType.HTTP_START
@@ -195,4 +197,4 @@ class HTTPASGIController(IHTTPController):
         return ASGISendEventType(event_type)
 
     def is_keepalive(self) -> bool:
-        return self.http_parser.is_keepalive()
+        return self._is_keepalive

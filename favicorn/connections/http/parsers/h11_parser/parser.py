@@ -111,7 +111,6 @@ class H11HTTPParser(IHTTPParser):
             method=self.method,
             headers=self.headers,
             raw_path=self.path.encode(),
-            is_keepalive=self.is_keepalive(),
             http_version=self.http_version,
             query_string=self.query_string,
         )
@@ -126,15 +125,6 @@ class H11HTTPParser(IHTTPParser):
 
     def is_more_body(self) -> bool:
         return self.more_body
-
-    def is_keepalive(self) -> bool:
-        if not self.is_metadata_ready():
-            return False
-        if self.connection_header == "keep-alive":
-            return True
-        if self.connection_header == "close":
-            return False
-        return self.http_version != "1.0"
 
 
 class H11HTTPParserFactory(IHTTPParserFactory):

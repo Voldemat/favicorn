@@ -8,6 +8,18 @@ class RequestMetadata:
     method: str
     raw_path: bytes
     http_version: str
-    is_keepalive: bool
     query_string: bytes | None
     headers: Iterable[tuple[bytes, bytes]]
+
+    def is_keepalive(self) -> bool:
+        if connection_header := next(
+            filter(lambda h: h[0] == b"connection", self.headers), None
+        ):
+            _, value = connection_header
+            if value == b"keep-alive":
+                return True
+            elif value == b"close":
+                return False
+        if self.http_version == "1.0":
+            return False
+        return True

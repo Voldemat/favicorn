@@ -32,10 +32,6 @@ class IHTTPParser(ABC):
     def is_more_body(self) -> bool:
         raise NotImplementedError
 
-    @abstractmethod
-    def is_keepalive(self) -> bool:
-        raise NotImplementedError
-
 
 class IHTTPParserFactory(ABC):
     @abstractmethod
