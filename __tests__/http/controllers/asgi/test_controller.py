@@ -29,7 +29,20 @@ async def test_controller_returns_200(
     http_parser_factory: IHTTPParserFactory,
     http_serializer_factory: IHTTPSerializerFactory,
 ) -> None:
+    request_bytes = b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"
+
     async def app(scope, receive, send) -> None:  # type: ignore
+        assert scope["type"] == "http"
+        assert scope["scheme"] == "http"
+        assert scope["path"] == "/"
+        assert scope["method"] == "GET"
+        assert scope["http_version"] == "1.1"
+        assert scope["headers"][0] == (b"host", b"localhost")
+        assert await receive() == {
+            "type": "http.request",
+            "body": b"",
+            "more_body": False,
+        }
         await send(
             {
                 "type": "http.response.start",
@@ -54,7 +67,7 @@ async def test_controller_returns_200(
         HTTPControllerReceiveEvent(count=None, timeout=None)
         == await event_bus.__anext__()
     )
-    event_bus.provide_for_receive(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    event_bus.provide_for_receive(request_bytes)
     expected_res_metadata = ResponseMetadata(
         status=200, headers=((b"Content-Length", b"0"),)
     )

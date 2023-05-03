@@ -129,7 +129,7 @@ class HTTPASGIController(IHTTPController):
         if data is None:
             if s_data := await self.event_bus.receive():
                 self.http_parser.feed_data(s_data)
-        data = self.http_parser.get_body()
+            data = self.http_parser.get_body()
         if data is None:
             return {"type": "http.disconnect"}
         return {
