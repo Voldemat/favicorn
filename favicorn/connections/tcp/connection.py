@@ -3,6 +3,7 @@ from favicorn.i.controller import IControllerFactory
 from favicorn.i.event_bus import (
     ControllerReceiveEvent,
     ControllerSendEvent,
+    IEventBus,
 )
 from favicorn.reader import SocketReader
 from favicorn.writer import SocketWriter
@@ -35,6 +36,14 @@ class TCPConnection(IConnection):
         controller = self.controller_factory.build()
         event_bus = controller.get_event_bus()
         await controller.start(client=self.client)
+        try:
+            await self.process_controller_events(event_bus)
+            self.keepalive = controller.is_keepalive()
+        finally:
+            await controller.stop()
+            await self.writer.flush()
+
+    async def process_controller_events(self, event_bus: IEventBus) -> None:
         async for event in event_bus:
             if isinstance(event, ControllerReceiveEvent):
                 event_bus.provide_for_receive(
@@ -46,9 +55,6 @@ class TCPConnection(IConnection):
                 self.writer.write(event.data)
             else:
                 raise ValueError(f"Unhandled event type {type(event)}")
-        self.keepalive = controller.is_keepalive()
-        await controller.stop()
-        await self.writer.flush()
 
     async def close(self) -> None:
         await self.writer.close()
