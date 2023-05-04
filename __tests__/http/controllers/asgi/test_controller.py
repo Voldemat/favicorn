@@ -1,8 +1,4 @@
 from favicorn.controllers.http.asgi import HTTPASGIControllerFactory
-from favicorn.controllers.http.asgi.responses import (
-    RESPONSE_400,
-    RESPONSE_500,
-)
 from favicorn.controllers.http.iparser import IHTTPParserFactory
 from favicorn.controllers.http.iserializer import IHTTPSerializerFactory
 from favicorn.controllers.http.response_metadata import ResponseMetadata
@@ -111,10 +107,22 @@ async def test_controller_returns_500_on_exception_in_asgi_callable(
         == await event_bus.__anext__()
     )
     event_bus.provide_for_receive(b"GET / HTTP/1.0\r\n\r\n")
+    expected_res_body = b"Internal Server Error"
     assert (
         ControllerSendEvent(
-            data=serializer.serialize_metadata(RESPONSE_500.metadata)
-            + serializer.serialize_body(RESPONSE_500.body)
+            data=serializer.serialize_metadata(
+                ResponseMetadata(
+                    status=500,
+                    headers=(
+                        (b"Content-Type", b"text/plain; charset=utf-8"),
+                        (
+                            b"Content-Length",
+                            str(len(expected_res_body)).encode(),
+                        ),
+                    ),
+                )
+            )
+            + serializer.serialize_body(expected_res_body)
         )
         == await event_bus.__anext__()
     )
@@ -147,10 +155,22 @@ async def test_controller_returns_400_on_invalid_http_request(
         == await event_bus.__anext__()
     )
     event_bus.provide_for_receive(b"asdasds/ HTTP/1.0\r\n\r\n")
+    expected_res_body = b"Invalid http request"
     assert (
         ControllerSendEvent(
-            data=serializer.serialize_metadata(RESPONSE_400.metadata)
-            + serializer.serialize_body(RESPONSE_400.body)
+            data=serializer.serialize_metadata(
+                ResponseMetadata(
+                    status=400,
+                    headers=(
+                        (b"Content-Type", b"text/plain; charset=utf-8"),
+                        (
+                            b"Content-Length",
+                            str(len(expected_res_body)).encode(),
+                        ),
+                    ),
+                )
+            )
+            + serializer.serialize_body(expected_res_body)
         )
         == await event_bus.__anext__()
     )
