@@ -1,7 +1,7 @@
 import socket
 from typing import Literal
 
-from ..isocket_provider import ISocketProvider
+from favicorn.i.socket_provider import ISocketProvider
 
 
 INET_FAMILY = (

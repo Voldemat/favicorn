@@ -2,8 +2,8 @@ import asyncio
 import logging
 
 from .connection_manager import ConnectionManager
-from .iconnection import IConnectionFactory
-from .isocket_provider import ISocketProvider
+from .i.connection import IConnectionFactory
+from .i.socket_provider import ISocketProvider
 
 
 class Server:

@@ -1,5 +1,4 @@
-from .tcp import TCPConnection, TCPConnectionFactory
-
+from .connection import TCPConnection, TCPConnectionFactory
 
 __all__ = (
     "TCPConnection",

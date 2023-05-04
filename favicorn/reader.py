@@ -37,7 +37,7 @@ class SocketReader:
             return None
         return data
 
-    async def wait(self, timeout: int | None = None) -> bool:
+    async def wait(self, timeout: float | None = None) -> bool:
         if data := await self.read(timeout=timeout, count=None):
             self.buffered_data = data
             return True

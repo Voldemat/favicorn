@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from .reader import SocketReader
-from .writer import SocketWriter
+from ..reader import SocketReader
+from ..writer import SocketWriter
 
 
 class IConnection(ABC):

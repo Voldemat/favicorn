@@ -1,6 +1,6 @@
 import asyncio
 
-from .iconnection import IConnectionFactory
+from .i.connection import IConnectionFactory
 from .reader import SocketReader
 from .writer import SocketWriter
 
@@ -17,13 +17,11 @@ class ConnectionManager:
         stream_reader: asyncio.StreamReader,
         stream_writer: asyncio.StreamWriter,
     ) -> None:
-        reader = SocketReader(
-            stream_reader=stream_reader, default_read_count=4028
-        )
-        writer = SocketWriter(stream_writer=stream_writer)
         connection = self.connection_factory.build(
-            reader,
-            writer,
+            reader=SocketReader(
+                stream_reader=stream_reader, default_read_count=4028
+            ),
+            writer=SocketWriter(stream_writer=stream_writer),
         )
         try:
             await connection.main()

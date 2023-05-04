@@ -1,21 +1,20 @@
-from favicorn.iconnection import IConnection
+from favicorn.i.connection import IConnection, IConnectionFactory
+from favicorn.i.controller import IControllerFactory
+from favicorn.i.event_bus import (
+    ControllerReceiveEvent,
+    ControllerSendEvent,
+)
 from favicorn.reader import SocketReader
 from favicorn.writer import SocketWriter
 
-from .controller_events import (
-    HTTPControllerReceiveEvent,
-    HTTPControllerSendEvent,
-)
-from .icontroller import IHTTPControllerFactory
 
-
-class HTTPConnection(IConnection):
+class TCPConnection(IConnection):
     def __init__(
         self,
-        controller_factory: IHTTPControllerFactory,
         reader: SocketReader,
         writer: SocketWriter,
-        keepalive_timeout_s: int = 5,
+        controller_factory: IControllerFactory,
+        keepalive_timeout_s: float,
     ) -> None:
         self.reader = reader
         self.writer = writer
@@ -33,16 +32,17 @@ class HTTPConnection(IConnection):
             await self.process_request()
 
     async def process_request(self) -> None:
-        controller, event_bus = self.controller_factory.build()
+        controller = self.controller_factory.build()
+        event_bus = controller.get_event_bus()
         await controller.start(client=self.client)
         async for event in event_bus:
-            if isinstance(event, HTTPControllerReceiveEvent):
+            if isinstance(event, ControllerReceiveEvent):
                 event_bus.provide_for_receive(
                     await self.reader.read(
                         count=event.count, timeout=event.timeout
                     )
                 )
-            elif isinstance(event, HTTPControllerSendEvent):
+            elif isinstance(event, ControllerSendEvent):
                 self.writer.write(event.data)
             else:
                 raise ValueError(f"Unhandled event type {type(event)}")
@@ -52,3 +52,25 @@ class HTTPConnection(IConnection):
 
     async def close(self) -> None:
         await self.writer.close()
+
+
+class TCPConnectionFactory(IConnectionFactory):
+    def __init__(
+        self,
+        controller_factory: IControllerFactory,
+        keepalive_timeout_s: float = 5,
+    ) -> None:
+        self.controller_factory = controller_factory
+        self.keepalive_timeout_s = keepalive_timeout_s
+
+    def build(
+        self,
+        reader: SocketReader,
+        writer: SocketWriter,
+    ) -> IConnection:
+        return TCPConnection(
+            reader=reader,
+            writer=writer,
+            controller_factory=self.controller_factory,
+            keepalive_timeout_s=self.keepalive_timeout_s,
+        )

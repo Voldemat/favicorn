@@ -1,14 +1,18 @@
 from abc import ABC, abstractmethod
 
-from .ievent_bus import IHTTPEventBus
+from .event_bus import IEventBus
 
 
-class IHTTPController(ABC):
+class IController(ABC):
     @abstractmethod
     async def start(
         self,
         client: tuple[str, int] | None,
     ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_event_bus(self) -> IEventBus:
         raise NotImplementedError
 
     @abstractmethod
@@ -20,7 +24,7 @@ class IHTTPController(ABC):
         raise NotImplementedError
 
 
-class IHTTPControllerFactory(ABC):
+class IControllerFactory(ABC):
     @abstractmethod
-    def build(self) -> tuple[IHTTPController, IHTTPEventBus]:
+    def build(self) -> IController:
         raise NotImplementedError

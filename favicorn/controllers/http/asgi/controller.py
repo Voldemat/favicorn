@@ -16,12 +16,12 @@ if TYPE_CHECKING:
         WWWScope,
     )
 
-from favicorn.connections.http.icontroller import IHTTPController
-from favicorn.connections.http.ievent_bus import IHTTPEventBus
-from favicorn.connections.http.iparser import IHTTPParser
-from favicorn.connections.http.iserializer import IHTTPSerializer
-from favicorn.connections.http.request_metadata import RequestMetadata
-from favicorn.connections.http.response_metadata import ResponseMetadata
+from favicorn.controllers.http.iparser import IHTTPParser
+from favicorn.controllers.http.iserializer import IHTTPSerializer
+from favicorn.controllers.http.request_metadata import RequestMetadata
+from favicorn.controllers.http.response_metadata import ResponseMetadata
+from favicorn.i.controller import IController
+from favicorn.i.event_bus import IEventBus
 
 from .responses import (
     PredefinedResponse,
@@ -38,13 +38,13 @@ class ASGISendEventType(enum.Enum):
     HTTP_BODY = "http.response.body"
 
 
-class HTTPASGIController(IHTTPController):
+class HTTPASGIController(IController):
     app: "ASGI3Application"
     task: asyncio.Task[None] | None
     response_metadata: ResponseMetadata | None
     expected_event: ASGISendEventType | None
     http_parser: IHTTPParser
-    event_bus: IHTTPEventBus
+    event_bus: IEventBus
     serializer: IHTTPSerializer
     logger: logging.Logger
     request_path: str | None
@@ -55,7 +55,7 @@ class HTTPASGIController(IHTTPController):
         app: "ASGI3Application",
         http_parser: IHTTPParser,
         serializer: IHTTPSerializer,
-        event_bus: IHTTPEventBus,
+        event_bus: IEventBus,
         logger: logging.Logger,
     ) -> None:
         self.app = app
@@ -195,6 +195,9 @@ class HTTPASGIController(IHTTPController):
             event_type == self.expected_event.value
         ), f"Unexpected event {event_type}"
         return ASGISendEventType(event_type)
+
+    def get_event_bus(self) -> IEventBus:
+        return self.event_bus
 
     def is_keepalive(self) -> bool:
         return self._is_keepalive

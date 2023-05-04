@@ -1,10 +1,23 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import AsyncGenerator
 
-from .controller_events import HTTPControllerEvent
+
+@dataclass
+class ControllerReceiveEvent:
+    count: int | None
+    timeout: float | None
 
 
-class IHTTPEventBus(ABC, AsyncGenerator[HTTPControllerEvent, None]):
+@dataclass
+class ControllerSendEvent:
+    data: bytes
+
+
+ControllerEvent = ControllerReceiveEvent | ControllerSendEvent
+
+
+class IEventBus(ABC, AsyncGenerator[ControllerEvent, None]):
     @abstractmethod
     def send(self, data: bytes) -> None:
         raise NotImplementedError
@@ -24,7 +37,7 @@ class IHTTPEventBus(ABC, AsyncGenerator[HTTPControllerEvent, None]):
         raise NotImplementedError
 
 
-class IHTTPEventBusFactory(ABC):
+class IEventBusFactory(ABC):
     @abstractmethod
-    def build(self) -> IHTTPEventBus:
+    def build(self) -> IEventBus:
         raise NotImplementedError

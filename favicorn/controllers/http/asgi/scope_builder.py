@@ -5,7 +5,7 @@ if TYPE_CHECKING:
         HTTPScope,
     )
 
-from favicorn.connections.http.request_metadata import RequestMetadata
+from favicorn.controllers.http.request_metadata import RequestMetadata
 
 
 class ASGIScopeBuilder:

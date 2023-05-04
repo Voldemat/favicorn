@@ -1,16 +1,16 @@
-from favicorn.connections.http.controller_events import (
-    HTTPControllerReceiveEvent,
-    HTTPControllerSendEvent,
-)
-from favicorn.connections.http.controllers import HTTPASGIControllerFactory
-from favicorn.connections.http.controllers.asgi.responses import (
+from favicorn.controllers.http.asgi import HTTPASGIControllerFactory
+from favicorn.controllers.http.asgi.responses import (
     RESPONSE_400,
     RESPONSE_500,
 )
-from favicorn.connections.http.ievent_bus import IHTTPEventBusFactory
-from favicorn.connections.http.iparser import IHTTPParserFactory
-from favicorn.connections.http.iserializer import IHTTPSerializerFactory
-from favicorn.connections.http.response_metadata import ResponseMetadata
+from favicorn.controllers.http.iparser import IHTTPParserFactory
+from favicorn.controllers.http.iserializer import IHTTPSerializerFactory
+from favicorn.controllers.http.response_metadata import ResponseMetadata
+from favicorn.i.event_bus import (
+    ControllerReceiveEvent,
+    ControllerSendEvent,
+    IEventBusFactory,
+)
 
 import pytest
 
@@ -25,7 +25,7 @@ from __tests__.http.conftest import (
 @pytest.mark.parametrize("http_parser_factory", parser_factories)
 @pytest.mark.parametrize("http_serializer_factory", serializer_factories)
 async def test_controller_returns_200(
-    event_bus_factory: IHTTPEventBusFactory,
+    event_bus_factory: IEventBusFactory,
     http_parser_factory: IHTTPParserFactory,
     http_serializer_factory: IHTTPSerializerFactory,
 ) -> None:
@@ -61,10 +61,11 @@ async def test_controller_returns_200(
         event_bus_factory=event_bus_factory,
     )
     serializer = http_serializer_factory.build()
-    controller, event_bus = factory.build()
+    controller = factory.build()
+    event_bus = controller.get_event_bus()
     await controller.start(client=None)
     assert (
-        HTTPControllerReceiveEvent(count=None, timeout=None)
+        ControllerReceiveEvent(count=None, timeout=None)
         == await event_bus.__anext__()
     )
     event_bus.provide_for_receive(request_bytes)
@@ -72,14 +73,14 @@ async def test_controller_returns_200(
         status=200, headers=((b"Content-Length", b"0"),)
     )
     assert (
-        HTTPControllerSendEvent(
+        ControllerSendEvent(
             data=serializer.serialize_metadata(expected_res_metadata)
         )
         == await event_bus.__anext__()
     )
     await controller.stop()
     assert controller.is_keepalive()
-    assert HTTPControllerSendEvent(data=b"") == await event_bus.__anext__()
+    assert ControllerSendEvent(data=b"") == await event_bus.__anext__()
     with pytest.raises(StopAsyncIteration):
         await event_bus.__anext__()
 
@@ -88,7 +89,7 @@ async def test_controller_returns_200(
 @pytest.mark.parametrize("http_parser_factory", parser_factories)
 @pytest.mark.parametrize("http_serializer_factory", serializer_factories)
 async def test_controller_returns_500_on_exception_in_asgi_callable(
-    event_bus_factory: IHTTPEventBusFactory,
+    event_bus_factory: IEventBusFactory,
     http_parser_factory: IHTTPParserFactory,
     http_serializer_factory: IHTTPSerializerFactory,
 ) -> None:
@@ -102,15 +103,16 @@ async def test_controller_returns_500_on_exception_in_asgi_callable(
         event_bus_factory=event_bus_factory,
     )
     serializer = http_serializer_factory.build()
-    controller, event_bus = factory.build()
+    controller = factory.build()
+    event_bus = controller.get_event_bus()
     await controller.start(client=None)
     assert (
-        HTTPControllerReceiveEvent(count=None, timeout=None)
+        ControllerReceiveEvent(count=None, timeout=None)
         == await event_bus.__anext__()
     )
     event_bus.provide_for_receive(b"GET / HTTP/1.0\r\n\r\n")
     assert (
-        HTTPControllerSendEvent(
+        ControllerSendEvent(
             data=serializer.serialize_metadata(RESPONSE_500.metadata)
             + serializer.serialize_body(RESPONSE_500.body)
         )
@@ -126,7 +128,7 @@ async def test_controller_returns_500_on_exception_in_asgi_callable(
 @pytest.mark.parametrize("http_parser_factory", parser_factories)
 @pytest.mark.parametrize("http_serializer_factory", serializer_factories)
 async def test_controller_returns_400_on_invalid_http_request(
-    event_bus_factory: IHTTPEventBusFactory,
+    event_bus_factory: IEventBusFactory,
     http_parser_factory: IHTTPParserFactory,
     http_serializer_factory: IHTTPSerializerFactory,
 ) -> None:
@@ -137,15 +139,16 @@ async def test_controller_returns_400_on_invalid_http_request(
         event_bus_factory=event_bus_factory,
     )
     serializer = http_serializer_factory.build()
-    controller, event_bus = factory.build()
+    controller = factory.build()
+    event_bus = controller.get_event_bus()
     await controller.start(client=None)
     assert (
-        HTTPControllerReceiveEvent(count=None, timeout=None)
+        ControllerReceiveEvent(count=None, timeout=None)
         == await event_bus.__anext__()
     )
     event_bus.provide_for_receive(b"asdasds/ HTTP/1.0\r\n\r\n")
     assert (
-        HTTPControllerSendEvent(
+        ControllerSendEvent(
             data=serializer.serialize_metadata(RESPONSE_400.metadata)
             + serializer.serialize_body(RESPONSE_400.body)
         )

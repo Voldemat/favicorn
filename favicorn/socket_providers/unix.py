@@ -1,7 +1,7 @@
 import os
 import socket
 
-from ..isocket_provider import ISocketProvider
+from favicorn.i.socket_provider import ISocketProvider
 
 
 class UnixSocketProvider(ISocketProvider):
