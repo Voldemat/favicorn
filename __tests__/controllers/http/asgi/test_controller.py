@@ -10,8 +10,9 @@ from favicorn.i.event_bus import (
 
 import pytest
 
-from __tests__.http.conftest import (
-    event_bus_factories,
+from __tests__.conftest import event_bus_factories
+
+from ..conftest import (
     parser_factories,
     serializer_factories,
 )

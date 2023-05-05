@@ -5,13 +5,12 @@ from favicorn.controllers.http.iparser import (
 
 import pytest
 
-from __tests__.http.conftest import parser_factories
-
 from .conftest import (
     TestRequest,
     assert_metadata_equals,
     test_requests,
 )
+from ..conftest import parser_factories
 
 
 @pytest.mark.parametrize("parser_factory", parser_factories)
