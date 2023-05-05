@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from email.utils import formatdate
 from typing import Callable
 
-from favicorn.controllers.http.response_metadata import ResponseMetadata
+from favicorn.i.http.response_metadata import ResponseMetadata
 
 
 @dataclass

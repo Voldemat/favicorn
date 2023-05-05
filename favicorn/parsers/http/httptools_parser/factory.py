@@ -1,6 +1,6 @@
 from types import ModuleType
 
-from favicorn.controllers.http.iparser import IHTTPParser, IHTTPParserFactory
+from favicorn.i.http.parser import IHTTPParser, IHTTPParserFactory
 
 from .parser import HTTPToolsParser
 

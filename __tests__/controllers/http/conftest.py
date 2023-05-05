@@ -1,10 +1,10 @@
-from favicorn.controllers.http.iparser import IHTTPParserFactory
-from favicorn.controllers.http.iserializer import IHTTPSerializerFactory
-from favicorn.controllers.http.parsers import (
+from favicorn.i.http.parser import IHTTPParserFactory
+from favicorn.i.http.serializer import IHTTPSerializerFactory
+from favicorn.parsers.http import (
     H11HTTPParserFactory,
     HTTPToolsParserFactory,
 )
-from favicorn.controllers.http.serializers import HTTPBaseSerializerFactory
+from favicorn.serializers.http import HTTPBaseSerializerFactory
 
 import h11
 

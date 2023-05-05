@@ -1,12 +1,12 @@
 from types import ModuleType
 from typing import Iterable
 
-from favicorn.controllers.http.iparser import (
+from favicorn.i.http.parser import (
     HTTPParsingException,
     IHTTPParser,
     IHTTPParserFactory,
 )
-from favicorn.controllers.http.request_metadata import RequestMetadata
+from favicorn.i.http.request_metadata import RequestMetadata
 
 
 class H11HTTPParser(IHTTPParser):

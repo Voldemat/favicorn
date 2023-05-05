@@ -10,12 +10,12 @@ if TYPE_CHECKING:
         WWWScope,
     )
 
-from favicorn.controllers.http.iparser import IHTTPParser
-from favicorn.controllers.http.iserializer import IHTTPSerializer
-from favicorn.controllers.http.request_metadata import RequestMetadata
-from favicorn.controllers.http.response_metadata import ResponseMetadata
 from favicorn.i.controller import IController
 from favicorn.i.event_bus import IEventBus
+from favicorn.i.http.parser import IHTTPParser
+from favicorn.i.http.request_metadata import RequestMetadata
+from favicorn.i.http.response_metadata import ResponseMetadata
+from favicorn.i.http.serializer import IHTTPSerializer
 
 from .event_manager import ASGIEventManager
 from .responses import (

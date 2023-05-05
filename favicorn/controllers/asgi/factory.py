@@ -2,15 +2,15 @@ import logging
 
 from asgiref.typing import ASGI3Application
 
-from favicorn.controllers.http.iparser import IHTTPParserFactory
-from favicorn.controllers.http.iserializer import (
-    IHTTPSerializerFactory,
-)
 from favicorn.i.controller import (
     IController,
     IControllerFactory,
 )
 from favicorn.i.event_bus import IEventBusFactory
+from favicorn.i.http.parser import IHTTPParserFactory
+from favicorn.i.http.serializer import (
+    IHTTPSerializerFactory,
+)
 
 from .controller import HTTPASGIController
 

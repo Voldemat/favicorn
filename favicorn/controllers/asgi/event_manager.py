@@ -14,10 +14,9 @@ if TYPE_CHECKING:
     )
 
 from favicorn.i.event_bus import IEventBus
-
-from ..iparser import IHTTPParser
-from ..iserializer import IHTTPSerializer
-from ..response_metadata import ResponseMetadata
+from favicorn.i.http.parser import IHTTPParser
+from favicorn.i.http.response_metadata import ResponseMetadata
+from favicorn.i.http.serializer import IHTTPSerializer
 
 
 class ASGIEventManager:

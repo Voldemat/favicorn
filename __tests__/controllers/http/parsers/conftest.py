@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from favicorn.controllers.http.request_metadata import RequestMetadata
+from favicorn.i.http.request_metadata import RequestMetadata
 
 
 @dataclass

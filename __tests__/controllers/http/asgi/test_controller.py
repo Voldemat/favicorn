@@ -1,12 +1,12 @@
-from favicorn.controllers.http.asgi import HTTPASGIControllerFactory
-from favicorn.controllers.http.iparser import IHTTPParserFactory
-from favicorn.controllers.http.iserializer import IHTTPSerializerFactory
-from favicorn.controllers.http.response_metadata import ResponseMetadata
+from favicorn.controllers.asgi import HTTPASGIControllerFactory
 from favicorn.i.event_bus import (
     ControllerReceiveEvent,
     ControllerSendEvent,
     IEventBusFactory,
 )
+from favicorn.i.http.parser import IHTTPParserFactory
+from favicorn.i.http.response_metadata import ResponseMetadata
+from favicorn.i.http.serializer import IHTTPSerializerFactory
 
 import pytest
 
