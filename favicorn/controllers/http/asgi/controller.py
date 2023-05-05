@@ -1,18 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-import enum
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from asgiref.typing import (
         ASGI3Application,
-        ASGIReceiveEvent,
-        ASGISendEvent,
-        HTTPResponseBodyEvent,
-        HTTPResponseStartEvent,
-        HTTPResponseTrailersEvent,
         WWWScope,
     )
 
@@ -23,26 +17,19 @@ from favicorn.controllers.http.response_metadata import ResponseMetadata
 from favicorn.i.controller import IController
 from favicorn.i.event_bus import IEventBus
 
+from .event_manager import ASGIEventManager
 from .responses import (
     PredefinedResponse,
     RESPONSE_400,
     RESPONSE_500,
-    RESPONSE_WEBSOCKETS_IS_NOT_SUPPORTED,
 )
 from .scope_builder import ASGIScopeBuilder
-
-
-class ASGISendEventType(enum.Enum):
-    HTTP_START = "http.response.start"
-    HTTP_TRAILERS = "http.response.trailers"
-    HTTP_BODY = "http.response.body"
 
 
 class HTTPASGIController(IController):
     app: "ASGI3Application"
     task: asyncio.Task[None] | None
     response_metadata: ResponseMetadata | None
-    expected_event: ASGISendEventType | None
     http_parser: IHTTPParser
     event_bus: IEventBus
     serializer: IHTTPSerializer
@@ -68,9 +55,14 @@ class HTTPASGIController(IController):
 
         self.task = None
         self.response_metadata = None
-        self.expected_event = None
         self._is_keepalive = False
         self.scope_builder = ASGIScopeBuilder()
+        self.event_manager = ASGIEventManager(
+            http_parser=http_parser,
+            event_bus=event_bus,
+            http_serializer=serializer,
+            app=app,
+        )
 
     async def start(self, client: tuple[str, int] | None) -> None:
         self.task = asyncio.create_task(self.main(client))
@@ -82,7 +74,7 @@ class HTTPASGIController(IController):
                 self.send_predefined_response(result[1])
             else:
                 self.scope = result[0]
-                await self.app(result[0], self.receive, self.send)
+                await self.event_manager.launch_app(self.scope)
         except BaseException:
             self.logger.exception("ASGICallable raised an exception")
             self.send_predefined_response(RESPONSE_500)
@@ -99,10 +91,6 @@ class HTTPASGIController(IController):
         self.request_path = metadata.path
         self._is_keepalive = metadata.is_keepalive()
         scope = self.scope_builder.build(metadata, client)
-        if scope["type"] == "http":
-            self.expected_event = ASGISendEventType.HTTP_START
-        else:
-            return (None, RESPONSE_WEBSOCKETS_IS_NOT_SUPPORTED)
         self.logger.debug(f"ASGIController builds scope: {scope}")
         return (scope, None)
 
@@ -126,59 +114,6 @@ class HTTPASGIController(IController):
         except asyncio.CancelledError:
             pass
 
-    async def receive(self) -> "ASGIReceiveEvent":
-        data = self.http_parser.get_body()
-        if data is None:
-            if s_data := await self.event_bus.receive():
-                self.http_parser.feed_data(s_data)
-            data = self.http_parser.get_body()
-        if data is None:
-            return {"type": "http.disconnect"}
-        return {
-            "type": "http.request",
-            "body": data,
-            "more_body": self.http_parser.is_more_body(),
-        }
-
-    async def send(self, event: ASGISendEvent) -> None:
-        match self.build_send_event_type(event["type"]):
-            case ASGISendEventType.HTTP_START:
-                event = cast("HTTPResponseStartEvent", event)
-                self.response_metadata = ResponseMetadata(
-                    status=event["status"],
-                    headers=event["headers"],
-                )
-                if event.get("trailers", False) is True:
-                    self.expected_event = ASGISendEventType.HTTP_TRAILERS
-                else:
-                    self.expected_event = ASGISendEventType.HTTP_BODY
-                    self.event_bus.send(
-                        self.serializer.serialize_metadata(
-                            self.response_metadata
-                        ),
-                    )
-                self.log_response(event["status"])
-            case ASGISendEventType.HTTP_TRAILERS:
-                assert self.response_metadata is not None
-                event = cast("HTTPResponseTrailersEvent", event)
-                self.response_metadata.add_extra_headers(event["headers"])
-                if event.get("more_trailers", False) is False:
-                    self.expected_event = ASGISendEventType.HTTP_BODY
-                    self.event_bus.send(
-                        self.serializer.serialize_metadata(
-                            self.response_metadata
-                        ),
-                    )
-            case ASGISendEventType.HTTP_BODY:
-                event = cast("HTTPResponseBodyEvent", event)
-                self.event_bus.send(
-                    self.serializer.serialize_body(event["body"])
-                )
-                if event.get("more_body", False) is False:
-                    self.expected_event = None
-            case _:
-                raise RuntimeError(f"Unhandled event type: {event['type']}")
-
     def log_response(self, status: int) -> None:
         self.logger.info(f"[{status}] - {self.request_path}")
 
@@ -188,13 +123,6 @@ class HTTPASGIController(IController):
         ) + self.serializer.serialize_body(response.body)
         self.log_response(response.metadata.status)
         self.event_bus.send(data)
-
-    def build_send_event_type(self, event_type: str) -> ASGISendEventType:
-        assert self.expected_event is not None, "No events was expected"
-        assert (
-            event_type == self.expected_event.value
-        ), f"Unexpected event {event_type}"
-        return ASGISendEventType(event_type)
 
     def get_event_bus(self) -> IEventBus:
         return self.event_bus
