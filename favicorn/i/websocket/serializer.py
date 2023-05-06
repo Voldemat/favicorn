@@ -13,5 +13,5 @@ class IWebsocketSerializer(ABC):
 
 class IWebsocketSerializerFactory(ABC):
     @abstractmethod
-    def build(self) -> IWebsocketSerializer:
+    def build(self, is_client: bool = False) -> IWebsocketSerializer:
         pass

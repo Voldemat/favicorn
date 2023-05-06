@@ -7,10 +7,10 @@ from favicorn.i.websocket.serializer import (
 
 
 class WSProtoWebsocketSerializer(IWebsocketSerializer):
-    def __init__(self, wsproto: ModuleType) -> None:
+    def __init__(self, wsproto: ModuleType, is_client: bool) -> None:
         self.wsproto = wsproto
         self.serializer = wsproto.frame_protocol.FrameProtocol(
-            client=False, extensions=[]
+            client=is_client, extensions=[]
         )
 
     def serialize_data(self, data: bytes | str) -> bytes:
@@ -35,5 +35,7 @@ class WSProtoWebsocketSerializerFactory(IWebsocketSerializerFactory):
     def __init__(self, wsproto: ModuleType) -> None:
         self.wsproto = wsproto
 
-    def build(self) -> IWebsocketSerializer:
-        return WSProtoWebsocketSerializer(wsproto=self.wsproto)
+    def build(self, is_client: bool = False) -> IWebsocketSerializer:
+        return WSProtoWebsocketSerializer(
+            wsproto=self.wsproto, is_client=is_client
+        )

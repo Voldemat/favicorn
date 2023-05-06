@@ -225,6 +225,10 @@ async def test_controller_supporting_websockets(
         websocket_serializer_factory=websocket_serializer_factory,
     )
     http_serializer = http_serializer_factory.build()
+    websocket_serializer = websocket_serializer_factory.build()
+    client_websocket_serializer = websocket_serializer_factory.build(
+        is_client=True
+    )
     controller = factory.build()
     event_bus = controller.get_event_bus()
     await safe_async(controller.start(client=None))
@@ -249,12 +253,11 @@ async def test_controller_supporting_websockets(
     ) == await safe_async(event_bus.__anext__())
     assert CONTROLLER_RECEIVE_EVENT == await safe_async(event_bus.__anext__())
     event_bus.provide_for_receive(
-        b"\x82\x8f\x1a\xc0\xa0\xcdR\xa5\xcc\xa1u"
-        b"\xe0\xd7\xa8x\xb3\xcf\xaeq\xa5\xd4"
+        client_websocket_serializer.serialize_data(b"Hello websocket")
     )
-    assert ControllerSendEvent(data=b"\x88\x00") == await safe_async(
-        event_bus.__anext__()
-    )
+    assert ControllerSendEvent(
+        data=websocket_serializer.build_close_frame()
+    ) == await safe_async(event_bus.__anext__())
     await safe_async(controller.stop())
     with pytest.raises(StopAsyncIteration):
         await safe_async(event_bus.__anext__())
