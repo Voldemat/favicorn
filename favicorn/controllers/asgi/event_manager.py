@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
@@ -10,18 +11,22 @@ if TYPE_CHECKING:
         HTTPResponseBodyEvent,
         HTTPResponseStartEvent,
         HTTPResponseTrailersEvent,
-        WWWScope,
+        Scope,
     )
 
 from favicorn.i.event_bus import IEventBus
 from favicorn.i.http.parser import IHTTPParser
+from favicorn.i.http.request_metadata import RequestMetadata
 from favicorn.i.http.response_metadata import ResponseMetadata
 from favicorn.i.http.serializer import IHTTPSerializer
+
+from .responses import PredefinedResponse, RESPONSE_400, RESPONSE_500
+from .scope_builder import ASGIScopeBuilder
 
 
 class ASGIEventManager:
     expected_event: str | None
-    _scope: "WWWScope" | None
+    _scope: "Scope" | None
 
     def __init__(
         self,
@@ -29,26 +34,53 @@ class ASGIEventManager:
         http_parser: IHTTPParser,
         event_bus: IEventBus,
         http_serializer: IHTTPSerializer,
+        logger: logging.Logger,
     ) -> None:
         self.app = app
+        self.logger = logger
         self._scope = None
         self.expected_event = None
         self.event_bus = event_bus
         self.http_parser = http_parser
         self.http_serializer = http_serializer
+        self.scope_builder = ASGIScopeBuilder()
+        self._is_keepalive = False
 
     @property
-    def scope(self) -> "WWWScope":
+    def scope(self) -> "Scope":
         assert self._scope is not None
         return self._scope
 
-    async def launch_app(self, scope: "WWWScope") -> None:
-        self._scope = scope
-        if scope["type"] == "http":
+    async def launch_app(
+        self, metadata: RequestMetadata | None, client: tuple[str, int] | None
+    ) -> None:
+        if metadata is None:
+            self.send_predefined_response(RESPONSE_400)
+            return
+        self._is_keepalive = metadata.is_keepalive()
+        self._scope = self.scope_builder.build(metadata, client)
+        if self.scope["type"] == "http":
             self.expected_event = "http.response.start"
         else:
             self.expected_event = "websocket.accept"
-        await self.app(scope, self.receive, self.send)
+        try:
+            await self.app(self.scope, self.receive, self.send)
+        except BaseException:
+            self.logger.exception("ASGICallable raised an exception")
+            self.send_predefined_response(RESPONSE_500)
+
+    def send_predefined_response(self, response: PredefinedResponse) -> None:
+        data = self.http_serializer.serialize_metadata(
+            response.metadata
+        ) + self.http_serializer.serialize_body(response.body)
+        self.log_response(response.metadata.status)
+        self.event_bus.send(data)
+
+    def log_response(self, status: int) -> None:
+        path = (
+            self._scope.get("path", None) if self._scope is not None else None
+        )
+        self.logger.info(f"[{status}] - {path}")
 
     async def receive(self) -> "ASGIReceiveEvent":
         if self.scope["type"] == "http":
@@ -134,3 +166,6 @@ class ASGIEventManager:
             event_type == self.expected_event
         ), f"Unexpected event {event_type}"
         return event_type
+
+    def is_keepalive(self) -> bool:
+        return self._is_keepalive

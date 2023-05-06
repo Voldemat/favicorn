@@ -1,3 +1,6 @@
+import asyncio
+from typing import Awaitable, TypeVar
+
 from favicorn.controllers.asgi import HTTPASGIControllerFactory
 from favicorn.i.event_bus import (
     ControllerReceiveEvent,
@@ -16,6 +19,12 @@ from ..conftest import (
     parser_factories,
     serializer_factories,
 )
+
+T = TypeVar("T")
+
+
+def safe_async(aw: Awaitable[T], timeout: float = 1) -> Awaitable[T]:
+    return asyncio.wait_for(aw, timeout=timeout)
 
 
 @pytest.mark.parametrize("event_bus_factory", event_bus_factories)
@@ -60,26 +69,22 @@ async def test_controller_returns_200(
     serializer = http_serializer_factory.build()
     controller = factory.build()
     event_bus = controller.get_event_bus()
-    await controller.start(client=None)
-    assert (
-        ControllerReceiveEvent(count=None, timeout=None)
-        == await event_bus.__anext__()
-    )
+    await safe_async(controller.start(client=None))
+    assert ControllerReceiveEvent(
+        count=None, timeout=None
+    ) == await safe_async(event_bus.__anext__())
     event_bus.provide_for_receive(request_bytes)
     expected_res_metadata = ResponseMetadata(
         status=200, headers=((b"Content-Length", b"0"),)
     )
-    assert (
-        ControllerSendEvent(
-            data=serializer.serialize_metadata(expected_res_metadata)
-        )
-        == await event_bus.__anext__()
-    )
-    await controller.stop()
+    assert ControllerSendEvent(
+        data=serializer.serialize_metadata(expected_res_metadata)
+    ) == await safe_async(event_bus.__anext__())
+    await safe_async(controller.stop())
     assert controller.is_keepalive()
     assert ControllerSendEvent(data=b"") == await event_bus.__anext__()
     with pytest.raises(StopAsyncIteration):
-        await event_bus.__anext__()
+        await safe_async(event_bus.__anext__())
 
 
 @pytest.mark.parametrize("event_bus_factory", event_bus_factories)
@@ -102,35 +107,31 @@ async def test_controller_returns_500_on_exception_in_asgi_callable(
     serializer = http_serializer_factory.build()
     controller = factory.build()
     event_bus = controller.get_event_bus()
-    await controller.start(client=None)
-    assert (
-        ControllerReceiveEvent(count=None, timeout=None)
-        == await event_bus.__anext__()
-    )
+    await safe_async(controller.start(client=None))
+    assert ControllerReceiveEvent(
+        count=None, timeout=None
+    ) == await safe_async(event_bus.__anext__())
     event_bus.provide_for_receive(b"GET / HTTP/1.0\r\n\r\n")
     expected_res_body = b"Internal Server Error"
-    assert (
-        ControllerSendEvent(
-            data=serializer.serialize_metadata(
-                ResponseMetadata(
-                    status=500,
-                    headers=(
-                        (b"Content-Type", b"text/plain; charset=utf-8"),
-                        (
-                            b"Content-Length",
-                            str(len(expected_res_body)).encode(),
-                        ),
+    assert ControllerSendEvent(
+        data=serializer.serialize_metadata(
+            ResponseMetadata(
+                status=500,
+                headers=(
+                    (b"Content-Type", b"text/plain; charset=utf-8"),
+                    (
+                        b"Content-Length",
+                        str(len(expected_res_body)).encode(),
                     ),
-                )
+                ),
             )
-            + serializer.serialize_body(expected_res_body)
         )
-        == await event_bus.__anext__()
-    )
-    await controller.stop()
+        + serializer.serialize_body(expected_res_body)
+    ) == await safe_async(event_bus.__anext__())
+    await safe_async(controller.stop())
     assert not controller.is_keepalive()
     with pytest.raises(StopAsyncIteration):
-        await event_bus.__anext__()
+        await safe_async(event_bus.__anext__())
 
 
 @pytest.mark.parametrize("event_bus_factory", event_bus_factories)
@@ -150,32 +151,28 @@ async def test_controller_returns_400_on_invalid_http_request(
     serializer = http_serializer_factory.build()
     controller = factory.build()
     event_bus = controller.get_event_bus()
-    await controller.start(client=None)
-    assert (
-        ControllerReceiveEvent(count=None, timeout=None)
-        == await event_bus.__anext__()
-    )
+    await safe_async(controller.start(client=None))
+    assert ControllerReceiveEvent(
+        count=None, timeout=None
+    ) == await safe_async(event_bus.__anext__())
     event_bus.provide_for_receive(b"asdasds/ HTTP/1.0\r\n\r\n")
     expected_res_body = b"Invalid http request"
-    assert (
-        ControllerSendEvent(
-            data=serializer.serialize_metadata(
-                ResponseMetadata(
-                    status=400,
-                    headers=(
-                        (b"Content-Type", b"text/plain; charset=utf-8"),
-                        (
-                            b"Content-Length",
-                            str(len(expected_res_body)).encode(),
-                        ),
+    assert ControllerSendEvent(
+        data=serializer.serialize_metadata(
+            ResponseMetadata(
+                status=400,
+                headers=(
+                    (b"Content-Type", b"text/plain; charset=utf-8"),
+                    (
+                        b"Content-Length",
+                        str(len(expected_res_body)).encode(),
                     ),
-                )
+                ),
             )
-            + serializer.serialize_body(expected_res_body)
         )
-        == await event_bus.__anext__()
-    )
-    await controller.stop()
+        + serializer.serialize_body(expected_res_body)
+    ) == await safe_async(event_bus.__anext__())
+    await safe_async(controller.stop())
     assert not controller.is_keepalive()
     with pytest.raises(StopAsyncIteration):
-        await event_bus.__anext__()
+        await safe_async(event_bus.__anext__())
