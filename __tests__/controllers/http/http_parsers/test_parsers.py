@@ -10,10 +10,10 @@ from .conftest import (
     assert_metadata_equals,
     test_requests,
 )
-from ..conftest import parser_factories
+from ..conftest import http_parser_factories
 
 
-@pytest.mark.parametrize("parser_factory", parser_factories)
+@pytest.mark.parametrize("parser_factory", http_parser_factories)
 @pytest.mark.parametrize("t_request", test_requests)
 async def test_parse_request(
     parser_factory: IHTTPParserFactory,
@@ -30,7 +30,7 @@ async def test_parse_request(
     assert parser.is_more_body() is False
 
 
-@pytest.mark.parametrize("parser_factory", parser_factories)
+@pytest.mark.parametrize("parser_factory", http_parser_factories)
 @pytest.mark.parametrize("t_request", test_requests)
 async def test_parse_request_in_two_batches(
     parser_factory: IHTTPParserFactory,
@@ -72,7 +72,7 @@ async def test_parse_request_in_two_batches(
         ),
     ],
 )
-@pytest.mark.parametrize("parser_factory", parser_factories)
+@pytest.mark.parametrize("parser_factory", http_parser_factories)
 async def test_raise_error_on_h11_request_with_invalid_host(
     parser_factory: IHTTPParserFactory,
     request_bytes: bytes,

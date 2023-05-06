@@ -1,7 +1,7 @@
 import asyncio
 from typing import Awaitable, TypeVar
 
-from favicorn.controllers.asgi import HTTPASGIControllerFactory
+from favicorn.controllers.asgi import ASGIControllerFactory
 from favicorn.i.event_bus import (
     ControllerReceiveEvent,
     ControllerSendEvent,
@@ -10,14 +10,18 @@ from favicorn.i.event_bus import (
 from favicorn.i.http.parser import IHTTPParserFactory
 from favicorn.i.http.response_metadata import ResponseMetadata
 from favicorn.i.http.serializer import IHTTPSerializerFactory
+from favicorn.i.websocket.parser import IWebsocketParserFactory
+from favicorn.i.websocket.serializer import IWebsocketSerializerFactory
 
 import pytest
 
 from __tests__.conftest import event_bus_factories
 
 from ..conftest import (
-    parser_factories,
-    serializer_factories,
+    http_parser_factories,
+    http_serializer_factories,
+    websocket_parser_factories,
+    websocket_serializer_factories,
 )
 
 T = TypeVar("T")
@@ -27,9 +31,12 @@ def safe_async(aw: Awaitable[T], timeout: float = 1) -> Awaitable[T]:
     return asyncio.wait_for(aw, timeout=timeout)
 
 
+CONTROLLER_RECEIVE_EVENT = ControllerReceiveEvent(count=None, timeout=None)
+
+
 @pytest.mark.parametrize("event_bus_factory", event_bus_factories)
-@pytest.mark.parametrize("http_parser_factory", parser_factories)
-@pytest.mark.parametrize("http_serializer_factory", serializer_factories)
+@pytest.mark.parametrize("http_parser_factory", http_parser_factories)
+@pytest.mark.parametrize("http_serializer_factory", http_serializer_factories)
 async def test_controller_returns_200(
     event_bus_factory: IEventBusFactory,
     http_parser_factory: IHTTPParserFactory,
@@ -60,10 +67,10 @@ async def test_controller_returns_200(
             {"type": "http.response.body", "body": b"", "more_body": False}
         )
 
-    factory = HTTPASGIControllerFactory(
+    factory = ASGIControllerFactory(
         app,
         http_parser_factory=http_parser_factory,
-        serializer_factory=http_serializer_factory,
+        http_serializer_factory=http_serializer_factory,
         event_bus_factory=event_bus_factory,
     )
     serializer = http_serializer_factory.build()
@@ -88,8 +95,8 @@ async def test_controller_returns_200(
 
 
 @pytest.mark.parametrize("event_bus_factory", event_bus_factories)
-@pytest.mark.parametrize("http_parser_factory", parser_factories)
-@pytest.mark.parametrize("http_serializer_factory", serializer_factories)
+@pytest.mark.parametrize("http_parser_factory", http_parser_factories)
+@pytest.mark.parametrize("http_serializer_factory", http_serializer_factories)
 async def test_controller_returns_500_on_exception_in_asgi_callable(
     event_bus_factory: IEventBusFactory,
     http_parser_factory: IHTTPParserFactory,
@@ -98,10 +105,10 @@ async def test_controller_returns_500_on_exception_in_asgi_callable(
     async def app(scope, receive, send) -> None:  # type: ignore
         raise Exception()
 
-    factory = HTTPASGIControllerFactory(
+    factory = ASGIControllerFactory(
         app,
         http_parser_factory=http_parser_factory,
-        serializer_factory=http_serializer_factory,
+        http_serializer_factory=http_serializer_factory,
         event_bus_factory=event_bus_factory,
     )
     serializer = http_serializer_factory.build()
@@ -135,17 +142,17 @@ async def test_controller_returns_500_on_exception_in_asgi_callable(
 
 
 @pytest.mark.parametrize("event_bus_factory", event_bus_factories)
-@pytest.mark.parametrize("http_parser_factory", parser_factories)
-@pytest.mark.parametrize("http_serializer_factory", serializer_factories)
+@pytest.mark.parametrize("http_parser_factory", http_parser_factories)
+@pytest.mark.parametrize("http_serializer_factory", http_serializer_factories)
 async def test_controller_returns_400_on_invalid_http_request(
     event_bus_factory: IEventBusFactory,
     http_parser_factory: IHTTPParserFactory,
     http_serializer_factory: IHTTPSerializerFactory,
 ) -> None:
-    factory = HTTPASGIControllerFactory(
+    factory = ASGIControllerFactory(
         lambda: None,  # type: ignore[misc,arg-type]
         http_parser_factory=http_parser_factory,
-        serializer_factory=http_serializer_factory,
+        http_serializer_factory=http_serializer_factory,
         event_bus_factory=event_bus_factory,
     )
     serializer = http_serializer_factory.build()
@@ -174,5 +181,80 @@ async def test_controller_returns_400_on_invalid_http_request(
     ) == await safe_async(event_bus.__anext__())
     await safe_async(controller.stop())
     assert not controller.is_keepalive()
+    with pytest.raises(StopAsyncIteration):
+        await safe_async(event_bus.__anext__())
+
+
+@pytest.mark.parametrize("event_bus_factory", event_bus_factories)
+@pytest.mark.parametrize("http_parser_factory", http_parser_factories)
+@pytest.mark.parametrize("http_serializer_factory", http_serializer_factories)
+@pytest.mark.parametrize(
+    "websocket_parser_factory", websocket_parser_factories
+)
+@pytest.mark.parametrize(
+    "websocket_serializer_factory", websocket_serializer_factories
+)
+async def test_controller_supporting_websockets(
+    event_bus_factory: IEventBusFactory,
+    http_parser_factory: IHTTPParserFactory,
+    http_serializer_factory: IHTTPSerializerFactory,
+    websocket_parser_factory: IWebsocketParserFactory,
+    websocket_serializer_factory: IWebsocketSerializerFactory,
+) -> None:
+    async def app(  # type: ignore[no-untyped-def]
+        scope, receive, send
+    ) -> None:
+        assert scope["type"] == "websocket"
+        event = await receive()
+        assert event["type"] == "websocket.connect"
+        await send(
+            {"type": "websocket.accept", "subprotocol": None, "headers": []}
+        )
+        event = await receive()
+        assert event["type"] == "websocket.receive"
+        assert event["bytes"] == b"Hello websocket"
+        assert event["text"] is None
+        await send({"type": "websocket.close", "code": 1000})
+
+    factory = ASGIControllerFactory(
+        app=app,
+        event_bus_factory=event_bus_factory,
+        http_parser_factory=http_parser_factory,
+        http_serializer_factory=http_serializer_factory,
+        websocket_parser_factory=websocket_parser_factory,
+        websocket_serializer_factory=websocket_serializer_factory,
+    )
+    http_serializer = http_serializer_factory.build()
+    controller = factory.build()
+    event_bus = controller.get_event_bus()
+    await safe_async(controller.start(client=None))
+
+    assert CONTROLLER_RECEIVE_EVENT == await safe_async(event_bus.__anext__())
+    event_bus.provide_for_receive(
+        b"GET / HTTP/1.1\r\n"
+        b"Host: localhost\r\n"
+        b"Upgrade: websocket\r\n"
+        b"Connection: Upgrade\r\n\r\n"
+    )
+    assert ControllerSendEvent(
+        data=http_serializer.serialize_metadata(
+            ResponseMetadata(
+                status=101,
+                headers=(
+                    (b"Connection", b"Upgrade"),
+                    (b"Upgrade", b"websocket"),
+                ),
+            )
+        )
+    ) == await safe_async(event_bus.__anext__())
+    assert CONTROLLER_RECEIVE_EVENT == await safe_async(event_bus.__anext__())
+    event_bus.provide_for_receive(
+        b"\x82\x8f\x1a\xc0\xa0\xcdR\xa5\xcc\xa1u"
+        b"\xe0\xd7\xa8x\xb3\xcf\xaeq\xa5\xd4"
+    )
+    assert ControllerSendEvent(data=b"\x88\x00") == await safe_async(
+        event_bus.__anext__()
+    )
+    await safe_async(controller.stop())
     with pytest.raises(StopAsyncIteration):
         await safe_async(event_bus.__anext__())

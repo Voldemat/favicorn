@@ -14,11 +14,13 @@ from favicorn.i.event_bus import IEventBus
 from favicorn.i.http.parser import IHTTPParser
 from favicorn.i.http.request_metadata import RequestMetadata
 from favicorn.i.http.serializer import IHTTPSerializer
+from favicorn.i.websocket.parser import IWebsocketParser
+from favicorn.i.websocket.serializer import IWebsocketSerializer
 
 from .event_manager import ASGIEventManager
 
 
-class HTTPASGIController(IController):
+class ASGIController(IController):
     logger: logging.Logger
     event_bus: IEventBus
     http_parser: IHTTPParser
@@ -28,21 +30,25 @@ class HTTPASGIController(IController):
     def __init__(
         self,
         app: "ASGI3Application",
-        http_parser: IHTTPParser,
-        serializer: IHTTPSerializer,
         event_bus: IEventBus,
         logger: logging.Logger,
+        http_parser: IHTTPParser,
+        http_serializer: IHTTPSerializer,
+        websocket_parser: IWebsocketParser | None,
+        websocket_serializer: IWebsocketSerializer | None,
     ) -> None:
         self.task = None
         self.logger = logger
         self.event_bus = event_bus
         self.http_parser = http_parser
         self.event_manager = ASGIEventManager(
-            http_parser=http_parser,
-            event_bus=event_bus,
-            http_serializer=serializer,
             app=app,
             logger=logger,
+            event_bus=event_bus,
+            http_parser=http_parser,
+            http_serializer=http_serializer,
+            websocket_parser=websocket_parser,
+            websocket_serializer=websocket_serializer,
         )
 
     async def start(self, client: tuple[str, int] | None) -> None:

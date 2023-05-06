@@ -5,10 +5,10 @@ from favicorn.i.http.serializer import IHTTPSerializerFactory
 import pytest
 
 from .conftest import TestResponse, test_responses
-from ..conftest import serializer_factories
+from ..conftest import http_serializer_factories
 
 
-@pytest.mark.parametrize("serializer_factory", serializer_factories)
+@pytest.mark.parametrize("serializer_factory", http_serializer_factories)
 @pytest.mark.parametrize("t_response", test_responses)
 async def test_serialize_response(
     serializer_factory: IHTTPSerializerFactory,

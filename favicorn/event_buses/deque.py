@@ -37,9 +37,9 @@ class DequeEventBus(IEventBus):
     async def receive(
         self, count: int | None = None, timeout: float | None = None
     ) -> bytes | None:
-        self.push_to_controller_queue(
-            ControllerReceiveEvent(count=count, timeout=timeout)
-        )
+        event = ControllerReceiveEvent(count=count, timeout=timeout)
+        if event not in self.controller_queue:
+            self.push_to_controller_queue(event)
         await self.provider_event.wait()
         if len(self.provider_queue) != 0:
             return self.provider_queue.popleft()

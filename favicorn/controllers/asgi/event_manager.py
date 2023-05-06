@@ -11,6 +11,7 @@ if TYPE_CHECKING:
         HTTPResponseBodyEvent,
         HTTPResponseStartEvent,
         HTTPResponseTrailersEvent,
+        WebSocketAcceptEvent,
         Scope,
     )
 
@@ -19,37 +20,53 @@ from favicorn.i.http.parser import IHTTPParser
 from favicorn.i.http.request_metadata import RequestMetadata
 from favicorn.i.http.response_metadata import ResponseMetadata
 from favicorn.i.http.serializer import IHTTPSerializer
+from favicorn.i.websocket.parser import IWebsocketParser
+from favicorn.i.websocket.serializer import IWebsocketSerializer
 
 from .responses import PredefinedResponse, RESPONSE_400, RESPONSE_500
 from .scope_builder import ASGIScopeBuilder
 
 
 class ASGIEventManager:
-    expected_event: str | None
+    expected_events: list[str]
     _scope: "Scope" | None
 
     def __init__(
         self,
         app: "ASGI3Application",
-        http_parser: IHTTPParser,
         event_bus: IEventBus,
-        http_serializer: IHTTPSerializer,
         logger: logging.Logger,
+        http_parser: IHTTPParser,
+        http_serializer: IHTTPSerializer,
+        websocket_parser: IWebsocketParser | None,
+        websocket_serializer: IWebsocketSerializer | None,
     ) -> None:
         self.app = app
-        self.logger = logger
         self._scope = None
-        self.expected_event = None
+        self.logger = logger
+        self.expected_events = []
+        self._is_keepalive = False
         self.event_bus = event_bus
         self.http_parser = http_parser
         self.http_serializer = http_serializer
         self.scope_builder = ASGIScopeBuilder()
-        self._is_keepalive = False
+        self._websocket_parser = websocket_parser
+        self._websocket_serializer = websocket_serializer
 
     @property
     def scope(self) -> "Scope":
         assert self._scope is not None
         return self._scope
+
+    @property
+    def websocket_parser(self) -> IWebsocketParser:
+        assert self._websocket_parser is not None
+        return self._websocket_parser
+
+    @property
+    def websocket_serializer(self) -> IWebsocketSerializer:
+        assert self._websocket_serializer is not None
+        return self._websocket_serializer
 
     async def launch_app(
         self, metadata: RequestMetadata | None, client: tuple[str, int] | None
@@ -60,14 +77,21 @@ class ASGIEventManager:
         self._is_keepalive = metadata.is_keepalive()
         self._scope = self.scope_builder.build(metadata, client)
         if self.scope["type"] == "http":
-            self.expected_event = "http.response.start"
+            self.expected_events = ["http.response.start"]
         else:
-            self.expected_event = "websocket.accept"
+            self.expected_events = ["websocket.accept", "websocket.close"]
         try:
             await self.app(self.scope, self.receive, self.send)
+            if not self.is_response_completed():
+                raise RuntimeError(
+                    "ASGICallable returns before finishing the response"
+                )
         except BaseException:
             self.logger.exception("ASGICallable raised an exception")
             self.send_predefined_response(RESPONSE_500)
+
+    def is_response_completed(self) -> bool:
+        return len(self.expected_events) == 0
 
     def send_predefined_response(self, response: PredefinedResponse) -> None:
         data = self.http_serializer.serialize_metadata(
@@ -103,11 +127,28 @@ class ASGIEventManager:
         }
 
     async def receive_websocket(self) -> "ASGIReceiveEvent":
-        return {
-            "type": "websocket.receive",
-            "bytes": b"",
-            "text": None,
-        }
+        if "websocket.send" not in self.expected_events:
+            return {"type": "websocket.connect"}
+        data = self.websocket_parser.get_data()
+        if data is None:
+            if s_data := await self.event_bus.receive():
+                self.websocket_parser.feed_data(s_data)
+            data = self.websocket_parser.get_data()
+        if isinstance(data, int):
+            return {
+                "type": "websocket.disconnect",
+                "code": data,
+            }
+        elif isinstance(data, str):
+            return {
+                "type": "websocket.receive",
+                "bytes": None,
+                "text": data,
+            }
+        elif isinstance(data, bytes):
+            return {"type": "websocket.receive", "bytes": data, "text": None}
+        else:
+            raise ValueError(f"Unhandled data type: {type(data)}")
 
     async def send(self, event: "ASGISendEvent") -> None:
         self.validate_event_type(event["type"])
@@ -128,9 +169,9 @@ class ASGIEventManager:
                     headers=event["headers"],
                 )
                 if event.get("trailers", False) is True:
-                    self.expected_event = "http.response.trailers"
+                    self.expected_events = ["http.response.trailers"]
                 else:
-                    self.expected_event = "http.response.body"
+                    self.expected_events = ["http.response.body"]
                     self.event_bus.send(
                         self.http_serializer.serialize_metadata(
                             self.response_metadata
@@ -141,7 +182,7 @@ class ASGIEventManager:
                 event = cast("HTTPResponseTrailersEvent", event)
                 self.response_metadata.add_extra_headers(event["headers"])
                 if event.get("more_trailers", False) is False:
-                    self.expected_event = "http.response.body"
+                    self.expected_events = ["http.response.body"]
                     self.event_bus.send(
                         self.http_serializer.serialize_metadata(
                             self.response_metadata
@@ -153,17 +194,42 @@ class ASGIEventManager:
                     self.http_serializer.serialize_body(event["body"])
                 )
                 if event.get("more_body", False) is False:
-                    self.expected_event = None
+                    self.expected_events = []
             case _:
                 raise RuntimeError(f"Unhandled event type: {event['type']}")
 
     async def send_websocket(self, event: "ASGISendEvent") -> None:
-        pass
+        match event["type"]:
+            case "websocket.accept":
+                event = cast("WebSocketAcceptEvent", event)
+                headers = [
+                    (b"Connection", b"Upgrade"),
+                    (b"Upgrade", b"websocket"),
+                ]
+                if subprotocol := event.get("subprotocol", None):
+                    headers.append(
+                        (b"Sec-Websocket-Protocol", subprotocol.encode())
+                    )
+                data = self.http_serializer.serialize_metadata(
+                    ResponseMetadata(
+                        status=101,
+                        headers=headers,
+                    )
+                )
+                self.event_bus.send(data)
+                self.expected_events = ["websocket.send", "websocket.close"]
+            case "websocket.close":
+                self.event_bus.send(
+                    self.websocket_serializer.build_close_frame()
+                )
+                self.expected_events = []
+            case _:
+                raise ValueError(f"Unhandled event type {event['type']}")
 
     def validate_event_type(self, event_type: str) -> str:
-        assert self.expected_event is not None, "No events was expected"
+        assert len(self.expected_events) != 0, "No events was expected"
         assert (
-            event_type == self.expected_event
+            event_type in self.expected_events
         ), f"Unexpected event {event_type}"
         return event_type
 

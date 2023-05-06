@@ -23,3 +23,10 @@ class RequestMetadata:
         if self.http_version == "1.0":
             return False
         return True
+
+    def is_websocket(self) -> bool:
+        for header, value in self.headers:
+            if header != b"upgrade":
+                continue
+            return value == b"websocket"
+        return False

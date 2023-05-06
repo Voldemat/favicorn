@@ -106,3 +106,5 @@ class HTTPToolsParser(IHTTPParser):
             self.parser.feed_data(data)
         except self.httptools.HttpParserInvalidMethodError:
             self.error = HTTPParsingException("Invalid method encountered")
+        except self.httptools.HttpParserUpgrade:
+            pass
