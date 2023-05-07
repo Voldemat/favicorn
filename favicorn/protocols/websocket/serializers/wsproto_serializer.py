@@ -1,14 +1,9 @@
-import base64
-import hashlib
 from types import ModuleType
 
 from favicorn.i.protocols.websocket.serializer import (
     IWebsocketSerializer,
     IWebsocketSerializerFactory,
 )
-
-
-ACCEPT_GUID = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 
 class WSProtoWebsocketSerializer(IWebsocketSerializer):
@@ -19,9 +14,10 @@ class WSProtoWebsocketSerializer(IWebsocketSerializer):
         )
 
     def create_accept_token(self, client_token: bytes) -> bytes:
-        accept_token = client_token + ACCEPT_GUID
-        accept_token = hashlib.sha1(accept_token).digest()
-        return base64.b64encode(accept_token)
+        token: bytes = self.wsproto.utilities.generate_accept_token(
+            client_token
+        )
+        return token
 
     def serialize_data(self, data: bytes | str) -> bytes:
         opcode = (

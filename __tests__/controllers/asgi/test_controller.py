@@ -1,6 +1,3 @@
-import base64
-import os
-
 from favicorn.controllers.asgi import ASGIControllerFactory
 from favicorn.i.event_bus import (
     ControllerReceiveEvent,
@@ -17,7 +14,7 @@ from favicorn.i.protocols.websocket.serializer import (
 
 import pytest
 
-from __tests__.conftest import safe_async
+from __tests__.conftest import create_websocket_client_key, safe_async
 from __tests__.factories import (
     event_bus_factories,
     http_parser_factories,
@@ -230,7 +227,7 @@ async def test_controller_supporting_websockets(
     await safe_async(controller.start(client=None))
 
     assert CONTROLLER_RECEIVE_EVENT == await safe_async(event_bus.__anext__())
-    sec_websocket_key = base64.b64encode(os.urandom(16))
+    sec_websocket_key = create_websocket_client_key()
     event_bus.provide_for_receive(
         b"GET / HTTP/1.1\r\n"
         b"Host: localhost\r\n"
