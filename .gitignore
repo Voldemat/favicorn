@@ -2,5 +2,6 @@
 .pytest_cache
 .env
 .swp
+.coverage
 __pycache__
 check.py

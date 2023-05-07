@@ -19,6 +19,7 @@ httpx = "*"
 httptools = "*"
 h11 = "*"
 wsproto = "*"
+coverage = "*"
 
 [requires]
 python_version = "3.10"
