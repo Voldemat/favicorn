@@ -1,7 +1,5 @@
-import asyncio
 import base64
 import os
-from typing import Awaitable, TypeVar
 
 from favicorn.controllers.asgi import ASGIControllerFactory
 from favicorn.i.event_bus import (
@@ -19,20 +17,14 @@ from favicorn.i.protocols.websocket.serializer import (
 
 import pytest
 
-from __tests__.conftest import event_bus_factories
-
-from ..conftest import (
+from __tests__.conftest import safe_async
+from __tests__.factories import (
+    event_bus_factories,
     http_parser_factories,
     http_serializer_factories,
     websocket_parser_factories,
     websocket_serializer_factories,
 )
-
-T = TypeVar("T")
-
-
-def safe_async(aw: Awaitable[T], timeout: float = 1) -> Awaitable[T]:
-    return asyncio.wait_for(aw, timeout=timeout)
 
 
 CONTROLLER_RECEIVE_EVENT = ControllerReceiveEvent(count=None, timeout=None)

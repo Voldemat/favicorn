@@ -1,3 +1,5 @@
+from favicorn.event_buses import DequeEventBusFactory
+from favicorn.i.event_bus import IEventBusFactory
 from favicorn.i.protocols.http.parser import IHTTPParserFactory
 from favicorn.i.protocols.http.serializer import IHTTPSerializerFactory
 from favicorn.i.protocols.websocket.parser import IWebsocketParserFactory
@@ -22,6 +24,10 @@ import httptools
 
 import wsproto
 
+
+event_bus_factories: list[IEventBusFactory] = [
+    DequeEventBusFactory(),
+]
 
 http_parser_factories: list[IHTTPParserFactory] = [
     H11HTTPParserFactory(h11),

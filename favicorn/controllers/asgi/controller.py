@@ -5,9 +5,7 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from asgiref.typing import (
-        ASGI3Application,
-    )
+    from asgiref.typing import ASGI3Application
 
 from favicorn.i.controller import IController
 from favicorn.i.event_bus import IEventBus

@@ -4,8 +4,9 @@ from favicorn.i.protocols.http.serializer import IHTTPSerializerFactory
 
 import pytest
 
+from __tests__.factories import http_serializer_factories
+
 from .conftest import TestResponse, test_responses
-from ..conftest import http_serializer_factories
 
 
 @pytest.mark.parametrize("serializer_factory", http_serializer_factories)

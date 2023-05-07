@@ -8,7 +8,7 @@ from favicorn.i.event_bus import (
 
 import pytest
 
-from ..conftest import event_bus_factories
+from ..factories import event_bus_factories
 
 
 @pytest.mark.parametrize("event_bus_factory", event_bus_factories)

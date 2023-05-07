@@ -1,6 +1,9 @@
-from favicorn.event_buses import DequeEventBusFactory
-from favicorn.i.event_bus import IEventBusFactory
+import asyncio
+from typing import Awaitable, TypeVar
 
-event_bus_factories: list[IEventBusFactory] = [
-    DequeEventBusFactory(),
-]
+
+T = TypeVar("T")
+
+
+def safe_async(aw: Awaitable[T], timeout: float = 1) -> Awaitable[T]:
+    return asyncio.wait_for(aw, timeout=timeout)
