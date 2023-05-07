@@ -4,6 +4,7 @@ if TYPE_CHECKING:
     from asgiref.typing import (
         WWWScope,
         HTTPScope,
+        Scope,
         WebSocketScope,
     )
 
@@ -44,3 +45,12 @@ class ASGIScopeBuilder:
             return cast(
                 "HTTPScope", {**base_scope, "type": "http", "scheme": "http"}
             )
+
+    def get_header(self, scope: "Scope", header: bytes) -> bytes | None:
+        if scope["type"] == "lifespan":
+            return None
+        for header_name, value in scope["headers"]:
+            if header_name != header:
+                continue
+            return value
+        return None

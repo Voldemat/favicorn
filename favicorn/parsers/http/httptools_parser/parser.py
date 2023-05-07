@@ -40,9 +40,7 @@ class HTTPParserState:
         )
 
     def add_header(self, name: bytes, value: bytes) -> None:
-        self.headers.append(
-            (name.decode().lower().encode(), value.decode().lower().encode())
-        )
+        self.headers.append((name.decode().lower().encode(), value))
 
 
 class HTTPToolsParser(IHTTPParser):

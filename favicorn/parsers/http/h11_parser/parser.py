@@ -77,7 +77,7 @@ class H11HTTPParser(IHTTPParser):
         for header, value in map(
             lambda item: (
                 item[0].decode().lower().encode(),
-                item[1].decode().lower().encode(),
+                item[1],
             ),
             headers,
         ):

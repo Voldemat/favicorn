@@ -15,10 +15,11 @@ class RequestMetadata:
         if connection_header := next(
             filter(lambda h: h[0] == b"connection", self.headers), None
         ):
-            _, value = connection_header
-            if value == b"keep-alive":
+            _, value_bytes = connection_header
+            value = value_bytes.decode().lower()
+            if value == "keep-alive":
                 return True
-            elif value == b"close":
+            elif value == "close":
                 return False
         if self.http_version == "1.0":
             return False
@@ -28,5 +29,5 @@ class RequestMetadata:
         for header, value in self.headers:
             if header != b"upgrade":
                 continue
-            return value == b"websocket"
+            return value.decode().lower() == "websocket"
         return False

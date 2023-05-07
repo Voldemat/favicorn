@@ -1,4 +1,6 @@
 import asyncio
+import base64
+import os
 from typing import Awaitable, TypeVar
 
 from favicorn.controllers.asgi import ASGIControllerFactory
@@ -234,11 +236,13 @@ async def test_controller_supporting_websockets(
     await safe_async(controller.start(client=None))
 
     assert CONTROLLER_RECEIVE_EVENT == await safe_async(event_bus.__anext__())
+    sec_websocket_key = base64.b64encode(os.urandom(16))
     event_bus.provide_for_receive(
         b"GET / HTTP/1.1\r\n"
         b"Host: localhost\r\n"
         b"Upgrade: websocket\r\n"
-        b"Connection: Upgrade\r\n\r\n"
+        b"Connection: Upgrade\r\n"
+        b"Sec-WebSocket-Key: " + sec_websocket_key + b"\r\n\r\n"
     )
     assert ControllerSendEvent(
         data=http_serializer.serialize_metadata(
@@ -247,6 +251,12 @@ async def test_controller_supporting_websockets(
                 headers=(
                     (b"Connection", b"Upgrade"),
                     (b"Upgrade", b"websocket"),
+                    (
+                        b"Sec-WebSocket-Accept",
+                        websocket_serializer.create_accept_token(
+                            sec_websocket_key
+                        ),
+                    ),
                 ),
             )
         )

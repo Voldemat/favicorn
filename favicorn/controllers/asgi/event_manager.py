@@ -202,9 +202,21 @@ class ASGIEventManager:
         match event["type"]:
             case "websocket.accept":
                 event = cast("WebSocketAcceptEvent", event)
+                client_token = (
+                    self.scope_builder.get_header(
+                        self.scope, b"sec-websocket-key"
+                    )
+                    or b""
+                )
                 headers = [
                     (b"Connection", b"Upgrade"),
                     (b"Upgrade", b"websocket"),
+                    (
+                        b"Sec-WebSocket-Accept",
+                        self.websocket_serializer.create_accept_token(
+                            client_token
+                        ),
+                    ),
                 ]
                 if subprotocol := event.get("subprotocol", None):
                     headers.append(
