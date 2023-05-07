@@ -4,8 +4,11 @@ from email.utils import formatdate
 from http import HTTPStatus
 from typing import Iterable, Sequence
 
-from favicorn.i.http.response_metadata import ResponseMetadata
-from favicorn.i.http.serializer import IHTTPSerializer, IHTTPSerializerFactory
+from favicorn.i.protocols.http.response_metadata import ResponseMetadata
+from favicorn.i.protocols.http.serializer import (
+    IHTTPSerializer,
+    IHTTPSerializerFactory,
+)
 
 
 class HTTPBaseSerializer(IHTTPSerializer):

@@ -1,16 +1,20 @@
-from favicorn.i.http.parser import IHTTPParserFactory
-from favicorn.i.http.serializer import IHTTPSerializerFactory
-from favicorn.i.websocket.parser import IWebsocketParserFactory
-from favicorn.i.websocket.serializer import IWebsocketSerializerFactory
-from favicorn.parsers.http import (
+from favicorn.i.protocols.http.parser import IHTTPParserFactory
+from favicorn.i.protocols.http.serializer import IHTTPSerializerFactory
+from favicorn.i.protocols.websocket.parser import IWebsocketParserFactory
+from favicorn.i.protocols.websocket.serializer import (
+    IWebsocketSerializerFactory,
+)
+from favicorn.protocols.http.parsers import (
     H11HTTPParserFactory,
     HTTPToolsParserFactory,
 )
-from favicorn.parsers.websocket import (
+from favicorn.protocols.http.serializers import HTTPBaseSerializerFactory
+from favicorn.protocols.websocket.parsers import (
     WSProtoWebsocketParserFactory,
 )
-from favicorn.serializers.http import HTTPBaseSerializerFactory
-from favicorn.serializers.websocket import WSProtoWebsocketSerializerFactory
+from favicorn.protocols.websocket.serializers import (
+    WSProtoWebsocketSerializerFactory,
+)
 
 import h11
 

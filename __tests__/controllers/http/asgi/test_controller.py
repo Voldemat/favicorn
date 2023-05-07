@@ -9,11 +9,13 @@ from favicorn.i.event_bus import (
     ControllerSendEvent,
     IEventBusFactory,
 )
-from favicorn.i.http.parser import IHTTPParserFactory
-from favicorn.i.http.response_metadata import ResponseMetadata
-from favicorn.i.http.serializer import IHTTPSerializerFactory
-from favicorn.i.websocket.parser import IWebsocketParserFactory
-from favicorn.i.websocket.serializer import IWebsocketSerializerFactory
+from favicorn.i.protocols.http.parser import IHTTPParserFactory
+from favicorn.i.protocols.http.response_metadata import ResponseMetadata
+from favicorn.i.protocols.http.serializer import IHTTPSerializerFactory
+from favicorn.i.protocols.websocket.parser import IWebsocketParserFactory
+from favicorn.i.protocols.websocket.serializer import (
+    IWebsocketSerializerFactory,
+)
 
 import pytest
 

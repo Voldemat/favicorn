@@ -16,12 +16,12 @@ if TYPE_CHECKING:
     )
 
 from favicorn.i.event_bus import IEventBus
-from favicorn.i.http.parser import IHTTPParser
-from favicorn.i.http.request_metadata import RequestMetadata
-from favicorn.i.http.response_metadata import ResponseMetadata
-from favicorn.i.http.serializer import IHTTPSerializer
-from favicorn.i.websocket.parser import IWebsocketParser
-from favicorn.i.websocket.serializer import IWebsocketSerializer
+from favicorn.i.protocols.http.parser import IHTTPParser
+from favicorn.i.protocols.http.request_metadata import RequestMetadata
+from favicorn.i.protocols.http.response_metadata import ResponseMetadata
+from favicorn.i.protocols.http.serializer import IHTTPSerializer
+from favicorn.i.protocols.websocket.parser import IWebsocketParser
+from favicorn.i.protocols.websocket.serializer import IWebsocketSerializer
 
 from .responses import PredefinedResponse, RESPONSE_400, RESPONSE_500
 from .scope_builder import ASGIScopeBuilder

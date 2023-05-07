@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 from types import ModuleType
 from typing import Any
 
-from favicorn.i.http.parser import HTTPParsingException, IHTTPParser
-from favicorn.i.http.request_metadata import RequestMetadata
+from favicorn.i.protocols.http.parser import HTTPParsingException, IHTTPParser
+from favicorn.i.protocols.http.request_metadata import RequestMetadata
 
 
 @dataclass

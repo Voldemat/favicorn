@@ -1,6 +1,6 @@
 from types import ModuleType
 
-from favicorn.i.websocket.parser import (
+from favicorn.i.protocols.websocket.parser import (
     IWebsocketParser,
     IWebsocketParserFactory,
 )

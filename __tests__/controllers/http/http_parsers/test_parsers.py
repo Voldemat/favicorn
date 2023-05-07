@@ -1,4 +1,4 @@
-from favicorn.i.http.parser import (
+from favicorn.i.protocols.http.parser import (
     HTTPParsingException,
     IHTTPParserFactory,
 )

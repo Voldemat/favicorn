@@ -2,7 +2,7 @@ import base64
 import hashlib
 from types import ModuleType
 
-from favicorn.i.websocket.serializer import (
+from favicorn.i.protocols.websocket.serializer import (
     IWebsocketSerializer,
     IWebsocketSerializerFactory,
 )

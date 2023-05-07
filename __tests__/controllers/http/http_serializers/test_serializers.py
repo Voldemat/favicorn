@@ -1,6 +1,6 @@
 import time
 
-from favicorn.i.http.serializer import IHTTPSerializerFactory
+from favicorn.i.protocols.http.serializer import IHTTPSerializerFactory
 
 import pytest
 

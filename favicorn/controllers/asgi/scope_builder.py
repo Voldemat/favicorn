@@ -8,7 +8,7 @@ if TYPE_CHECKING:
         WebSocketScope,
     )
 
-from favicorn.i.http.request_metadata import RequestMetadata
+from favicorn.i.protocols.http.request_metadata import RequestMetadata
 
 
 class ASGIScopeBuilder:

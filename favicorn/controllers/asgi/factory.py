@@ -7,12 +7,14 @@ from favicorn.i.controller import (
     IControllerFactory,
 )
 from favicorn.i.event_bus import IEventBusFactory
-from favicorn.i.http.parser import IHTTPParserFactory
-from favicorn.i.http.serializer import (
+from favicorn.i.protocols.http.parser import IHTTPParserFactory
+from favicorn.i.protocols.http.serializer import (
     IHTTPSerializerFactory,
 )
-from favicorn.i.websocket.parser import IWebsocketParserFactory
-from favicorn.i.websocket.serializer import IWebsocketSerializerFactory
+from favicorn.i.protocols.websocket.parser import IWebsocketParserFactory
+from favicorn.i.protocols.websocket.serializer import (
+    IWebsocketSerializerFactory,
+)
 
 from .controller import ASGIController
 
