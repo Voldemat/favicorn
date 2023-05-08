@@ -23,7 +23,12 @@ from favicorn.i.protocols.http.serializer import IHTTPSerializer
 from favicorn.i.protocols.websocket.parser import IWebsocketParser
 from favicorn.i.protocols.websocket.serializer import IWebsocketSerializer
 
-from .responses import PredefinedResponse, RESPONSE_400, RESPONSE_500
+from .responses import (
+    PredefinedResponse,
+    RESPONSE_400,
+    RESPONSE_500,
+    RESPONSE_WEBSOCKETS_IS_NOT_SUPPORTED,
+)
 from .scope_builder import ASGIScopeBuilder
 
 
@@ -78,7 +83,15 @@ class ASGIEventManager:
         self._scope = self.scope_builder.build(metadata, client)
         if self.scope["type"] == "http":
             self.expected_events = ["http.response.start"]
-        else:
+        if self.scope["type"] == "websocket":
+            if (
+                self._websocket_serializer is None
+                or self._websocket_parser is None
+            ):
+                self.send_predefined_response(
+                    RESPONSE_WEBSOCKETS_IS_NOT_SUPPORTED
+                )
+                return
             self.expected_events = ["websocket.accept", "websocket.close"]
         try:
             await self.app(self.scope, self.receive, self.send)

@@ -34,7 +34,7 @@ RESPONSE_500 = PredefinedResponse(
 )
 
 RESPONSE_CONTENT_WEBSOCKETS_IS_NOT_SUPPORTED = (
-    b"Websockets protocol is not supported"
+    b"Websockets protocol is unavailable"
 )
 RESPONSE_WEBSOCKETS_IS_NOT_SUPPORTED = PredefinedResponse(
     metadata=ResponseMetadata(

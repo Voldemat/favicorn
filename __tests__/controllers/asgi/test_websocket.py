@@ -30,6 +30,46 @@ CONTROLLER_RECEIVE_EVENT = ControllerReceiveEvent(count=None, timeout=None)
 @pytest.mark.parametrize("event_bus_factory", event_bus_factories)
 @pytest.mark.parametrize("http_parser_factory", http_parser_factories)
 @pytest.mark.parametrize("http_serializer_factory", http_serializer_factories)
+async def test_controller_not_supporting_websockets(
+    event_bus_factory: IEventBusFactory,
+    http_parser_factory: IHTTPParserFactory,
+    http_serializer_factory: IHTTPSerializerFactory,
+) -> None:
+    controller = ASGIControllerFactory(
+        app=None,  # type: ignore [arg-type]
+        event_bus_factory=event_bus_factory,
+        http_parser_factory=http_parser_factory,
+        http_serializer_factory=http_serializer_factory,
+    ).build()
+    event_bus = controller.get_event_bus()
+    http_serializer = http_serializer_factory.build()
+    await safe_async(controller.start(client=None))
+    assert CONTROLLER_RECEIVE_EVENT == await safe_async(event_bus.__anext__())
+    event_bus.provide_for_receive(
+        b"GET / HTTP/1.1\r\n"
+        b"Host: localhost\r\n"
+        b"Upgrade: websocket\r\n"
+        b"Connection: Upgrade\r\n"
+        b"Sec-WebSocket-Key: " + create_websocket_client_key() + b"\r\n\r\n"
+    )
+    expected_res_body = b"Websockets protocol is unavailable"
+    assert ControllerSendEvent(
+        data=http_serializer.serialize_metadata(
+            ResponseMetadata(
+                status=400,
+                headers=(
+                    (b"Content-Type", b"text/plain; charset=utf-8"),
+                    (b"Content-Length", str(len(expected_res_body)).encode()),
+                ),
+            )
+        )
+        + http_serializer.serialize_body(expected_res_body)
+    ) == await safe_async(event_bus.__anext__())
+
+
+@pytest.mark.parametrize("event_bus_factory", event_bus_factories)
+@pytest.mark.parametrize("http_parser_factory", http_parser_factories)
+@pytest.mark.parametrize("http_serializer_factory", http_serializer_factories)
 @pytest.mark.parametrize(
     "websocket_parser_factory", websocket_parser_factories
 )
