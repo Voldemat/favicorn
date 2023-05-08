@@ -38,8 +38,7 @@ async def test_controller_not_supporting_websockets(
     controller = ASGIControllerFactory(
         app=None,  # type: ignore [arg-type]
         event_bus_factory=event_bus_factory,
-        http_parser_factory=http_parser_factory,
-        http_serializer_factory=http_serializer_factory,
+        http_protocol=(http_parser_factory, http_serializer_factory),
     ).build()
     event_bus = controller.get_event_bus()
     http_serializer = http_serializer_factory.build()
@@ -101,10 +100,11 @@ async def test_controller_supporting_websockets(
     controller = ASGIControllerFactory(
         app=app,
         event_bus_factory=event_bus_factory,
-        http_parser_factory=http_parser_factory,
-        http_serializer_factory=http_serializer_factory,
-        websocket_parser_factory=websocket_parser_factory,
-        websocket_serializer_factory=websocket_serializer_factory,
+        http_protocol=(http_parser_factory, http_serializer_factory),
+        websocket_protocol=(
+            websocket_parser_factory,
+            websocket_serializer_factory,
+        ),
     ).build()
     event_bus = controller.get_event_bus()
     http_serializer = http_serializer_factory.build()

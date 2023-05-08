@@ -56,9 +56,8 @@ async def test_controller_returns_200(
 
     controller = ASGIControllerFactory(
         app,
-        http_parser_factory=http_parser_factory,
-        http_serializer_factory=http_serializer_factory,
         event_bus_factory=event_bus_factory,
+        http_protocol=(http_parser_factory, http_serializer_factory),
     ).build()
     event_bus = controller.get_event_bus()
     serializer = http_serializer_factory.build()
@@ -91,9 +90,8 @@ async def test_controller_returns_500_on_exception_in_asgi_callable(
 
     controller = ASGIControllerFactory(
         app,
-        http_parser_factory=http_parser_factory,
-        http_serializer_factory=http_serializer_factory,
         event_bus_factory=event_bus_factory,
+        http_protocol=(http_parser_factory, http_serializer_factory),
     ).build()
     event_bus = controller.get_event_bus()
     serializer = http_serializer_factory.build()
@@ -132,9 +130,8 @@ async def test_controller_returns_400_on_invalid_http_request(
 ) -> None:
     factory = ASGIControllerFactory(
         lambda: None,  # type: ignore[misc,arg-type]
-        http_parser_factory=http_parser_factory,
-        http_serializer_factory=http_serializer_factory,
         event_bus_factory=event_bus_factory,
+        http_protocol=(http_parser_factory, http_serializer_factory),
     )
     serializer = http_serializer_factory.build()
     controller = factory.build()
