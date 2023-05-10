@@ -76,7 +76,7 @@ class H11HTTPParser(IHTTPParser):
     def set_headers(self, headers: Iterable[tuple[bytes, bytes]]) -> None:
         for header, value in map(
             lambda item: (
-                item[0].decode().lower().encode(),
+                item[0].lower(),
                 item[1],
             ),
             headers,

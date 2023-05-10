@@ -23,8 +23,8 @@ test_responses = [
         ),
         expected_metadata_bytes=lambda timestamp: (
             b"HTTP/1.1 200 OK\r\n"
-            b"Server: favicorn\r\n"
-            + f"Date: {formatdate(timestamp, usegmt=True)}\r\n\r\n".encode()
+            b"server: favicorn\r\n"
+            + f"date: {formatdate(timestamp, usegmt=True)}\r\n\r\n".encode()
         ),
         body=b"",
         expected_body_bytes=b"",
@@ -35,9 +35,9 @@ test_responses = [
         ),
         expected_metadata_bytes=lambda timestamp: (
             b"HTTP/1.1 400 Bad Request\r\n"
-            b"Server: favicorn\r\n"
-            + f"Date: {formatdate(timestamp, usegmt=True)}\r\n".encode()
-            + b"Content-Length: 100\r\n\r\n"
+            b"server: favicorn\r\n"
+            + f"date: {formatdate(timestamp, usegmt=True)}\r\n".encode()
+            + b"content-length: 100\r\n\r\n"
         ),
         body=b"Hello world!",
         expected_body_bytes=b"Hello world!",

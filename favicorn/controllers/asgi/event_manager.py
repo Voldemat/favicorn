@@ -222,10 +222,10 @@ class ASGIEventManager:
                     or b""
                 )
                 headers = [
-                    (b"Connection", b"Upgrade"),
-                    (b"Upgrade", b"websocket"),
+                    (b"connection", b"Upgrade"),
+                    (b"upgrade", b"websocket"),
                     (
-                        b"Sec-WebSocket-Accept",
+                        b"sec-websocket-accept",
                         self.websocket_serializer.create_accept_token(
                             client_token
                         ),
@@ -233,7 +233,7 @@ class ASGIEventManager:
                 ]
                 if subprotocol := event.get("subprotocol", None):
                     headers.append(
-                        (b"Sec-Websocket-Protocol", subprotocol.encode())
+                        (b"sec-websocket-protocol", subprotocol.encode())
                     )
                 data = self.http_serializer.serialize_metadata(
                     ResponseMetadata(

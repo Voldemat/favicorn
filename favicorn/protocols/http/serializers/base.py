@@ -64,7 +64,9 @@ class HTTPBaseSerializer(IHTTPSerializer):
     def serialize_headers(
         self, headers: Iterable[tuple[bytes, bytes]]
     ) -> bytes:
-        return b"".join(map(lambda h: h[0] + b": " + h[1] + b"\r\n", headers))
+        return b"".join(
+            map(lambda h: h[0].lower() + b": " + h[1] + b"\r\n", headers)
+        )
 
 
 class HTTPBaseSerializerFactory(IHTTPSerializerFactory):
