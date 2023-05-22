@@ -12,6 +12,7 @@ if TYPE_CHECKING:
         HTTPResponseStartEvent,
         HTTPResponseTrailersEvent,
         WebSocketAcceptEvent,
+        WebSocketSendEvent,
         Scope,
     )
 
@@ -243,6 +244,20 @@ class ASGIEventManager:
                 )
                 self.event_bus.send(data)
                 self.expected_events = ["websocket.send", "websocket.close"]
+            case "websocket.send":
+                event = cast("WebSocketSendEvent", event)
+                data_bytes = event.get("bytes", None)
+                data_text = event.get("text", None)
+                ws_data: str | bytes
+                if data_bytes is not None:
+                    ws_data = data_bytes
+                elif data_text is not None:
+                    ws_data = data_text
+                else:
+                    raise ValueError("bytes or text must be provided")
+                self.event_bus.send(
+                    self.websocket_serializer.serialize_data(ws_data)
+                )
             case "websocket.close":
                 self.event_bus.send(
                     self.websocket_serializer.build_close_frame()

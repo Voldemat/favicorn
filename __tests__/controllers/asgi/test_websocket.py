@@ -95,6 +95,9 @@ async def test_controller_supporting_websockets(
         assert event["type"] == "websocket.receive"
         assert event["bytes"] == b"Hello websocket"
         assert event["text"] is None
+        await send(
+            {"type": "websocket.send", "bytes": b"Hello there!", "text": None}
+        )
         await send({"type": "websocket.close", "code": 1000})
 
     controller = ASGIControllerFactory(
@@ -142,6 +145,9 @@ async def test_controller_supporting_websockets(
     event_bus.provide_for_receive(
         client_websocket_serializer.serialize_data(b"Hello websocket")
     )
+    assert ControllerSendEvent(
+        data=websocket_serializer.serialize_data(b"Hello there!")
+    ) == await safe_async(event_bus.__anext__())
     assert ControllerSendEvent(
         data=websocket_serializer.build_close_frame()
     ) == await safe_async(event_bus.__anext__())
