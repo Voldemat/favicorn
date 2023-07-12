@@ -5,9 +5,11 @@ from favicorn.i.event_bus import (
     IEventBusFactory,
 )
 from favicorn.i.protocols.http.parser import IHTTPParserFactory
+from favicorn.i.protocols.http.protocol import HTTPProtocolFactory
 from favicorn.i.protocols.http.response_metadata import ResponseMetadata
 from favicorn.i.protocols.http.serializer import IHTTPSerializerFactory
 from favicorn.i.protocols.websocket.parser import IWebsocketParserFactory
+from favicorn.i.protocols.websocket.protocol import WebsocketProtocolFactory
 from favicorn.i.protocols.websocket.serializer import (
     IWebsocketSerializerFactory,
 )
@@ -38,7 +40,9 @@ async def test_controller_not_supporting_websockets(
     controller = ASGIControllerFactory(
         app=None,  # type: ignore [arg-type]
         event_bus_factory=event_bus_factory,
-        http_protocol=(http_parser_factory, http_serializer_factory),
+        http_protocol_factory=HTTPProtocolFactory(
+            http_parser_factory, http_serializer_factory
+        ),
     ).build()
     event_bus = controller.get_event_bus()
     http_serializer = http_serializer_factory.build()
@@ -103,8 +107,10 @@ async def test_controller_supporting_websockets(
     controller = ASGIControllerFactory(
         app=app,
         event_bus_factory=event_bus_factory,
-        http_protocol=(http_parser_factory, http_serializer_factory),
-        websocket_protocol=(
+        http_protocol_factory=HTTPProtocolFactory(
+            http_parser_factory, http_serializer_factory
+        ),
+        websocket_protocol_factory=WebsocketProtocolFactory(
             websocket_parser_factory,
             websocket_serializer_factory,
         ),

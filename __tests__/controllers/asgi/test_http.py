@@ -5,6 +5,7 @@ from favicorn.i.event_bus import (
     IEventBusFactory,
 )
 from favicorn.i.protocols.http.parser import IHTTPParserFactory
+from favicorn.i.protocols.http.protocol import HTTPProtocolFactory
 from favicorn.i.protocols.http.response_metadata import ResponseMetadata
 from favicorn.i.protocols.http.serializer import IHTTPSerializerFactory
 
@@ -57,7 +58,9 @@ async def test_controller_returns_200(
     controller = ASGIControllerFactory(
         app,
         event_bus_factory=event_bus_factory,
-        http_protocol=(http_parser_factory, http_serializer_factory),
+        http_protocol_factory=HTTPProtocolFactory(
+            http_parser_factory, http_serializer_factory
+        ),
     ).build()
     event_bus = controller.get_event_bus()
     serializer = http_serializer_factory.build()
@@ -91,7 +94,9 @@ async def test_controller_returns_500_on_exception_in_asgi_callable(
     controller = ASGIControllerFactory(
         app,
         event_bus_factory=event_bus_factory,
-        http_protocol=(http_parser_factory, http_serializer_factory),
+        http_protocol_factory=HTTPProtocolFactory(
+            http_parser_factory, http_serializer_factory
+        ),
     ).build()
     event_bus = controller.get_event_bus()
     serializer = http_serializer_factory.build()
@@ -131,7 +136,9 @@ async def test_controller_returns_400_on_invalid_http_request(
     factory = ASGIControllerFactory(
         lambda: None,  # type: ignore[misc,arg-type]
         event_bus_factory=event_bus_factory,
-        http_protocol=(http_parser_factory, http_serializer_factory),
+        http_protocol_factory=HTTPProtocolFactory(
+            http_parser_factory, http_serializer_factory
+        ),
     )
     serializer = http_serializer_factory.build()
     controller = factory.build()

@@ -7,14 +7,8 @@ from favicorn.i.controller import (
     IControllerFactory,
 )
 from favicorn.i.event_bus import IEventBusFactory
-from favicorn.i.protocols.http.parser import IHTTPParserFactory
-from favicorn.i.protocols.http.serializer import (
-    IHTTPSerializerFactory,
-)
-from favicorn.i.protocols.websocket.parser import IWebsocketParserFactory
-from favicorn.i.protocols.websocket.serializer import (
-    IWebsocketSerializerFactory,
-)
+from favicorn.i.protocols.http.protocol import HTTPProtocolFactory
+from favicorn.i.protocols.websocket.protocol import WebsocketProtocolFactory
 
 from .controller import ASGIController
 
@@ -24,30 +18,23 @@ class ASGIControllerFactory(IControllerFactory):
         self,
         app: ASGI3Application,
         event_bus_factory: IEventBusFactory,
-        http_protocol: tuple[IHTTPParserFactory, IHTTPSerializerFactory],
-        websocket_protocol: tuple[
-            IWebsocketParserFactory, IWebsocketSerializerFactory
-        ]
-        | None = None,
+        http_protocol_factory: HTTPProtocolFactory,
+        websocket_protocol_factory: WebsocketProtocolFactory | None = None,
         logger: logging.Logger = logging.getLogger(__name__),
     ) -> None:
         self.app = app
         self.logger = logger
         self.event_bus_factory = event_bus_factory
-        self.http_protocol = http_protocol
-        self.websocket_protocol = websocket_protocol
+        self.http_protocol_factory = http_protocol_factory
+        self.websocket_protocol_factory = websocket_protocol_factory
 
     def build(self) -> IController:
         return ASGIController(
             app=self.app,
             logger=self.logger,
             event_bus=self.event_bus_factory.build(),
-            http_parser=self.http_protocol[0].build(),
-            http_serializer=self.http_protocol[1].build(),
-            websocket_parser=self.websocket_protocol[0].build()
-            if self.websocket_protocol is not None
-            else None,
-            websocket_serializer=self.websocket_protocol[1].build()
-            if self.websocket_protocol is not None
+            http_protocol=self.http_protocol_factory.build(),
+            websocket_protocol=self.websocket_protocol_factory.build()
+            if self.websocket_protocol_factory is not None
             else None,
         )

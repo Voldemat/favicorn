@@ -17,12 +17,10 @@ if TYPE_CHECKING:
     )
 
 from favicorn.i.event_bus import IEventBus
-from favicorn.i.protocols.http.parser import IHTTPParser
+from favicorn.i.protocols.http.protocol import HTTPProtocol
 from favicorn.i.protocols.http.request_metadata import RequestMetadata
 from favicorn.i.protocols.http.response_metadata import ResponseMetadata
-from favicorn.i.protocols.http.serializer import IHTTPSerializer
-from favicorn.i.protocols.websocket.parser import IWebsocketParser
-from favicorn.i.protocols.websocket.serializer import IWebsocketSerializer
+from favicorn.i.protocols.websocket.protocol import WebsocketProtocol
 
 from .responses import (
     PredefinedResponse,
@@ -42,10 +40,8 @@ class ASGIEventManager:
         app: "ASGI3Application",
         event_bus: IEventBus,
         logger: logging.Logger,
-        http_parser: IHTTPParser,
-        http_serializer: IHTTPSerializer,
-        websocket_parser: IWebsocketParser | None,
-        websocket_serializer: IWebsocketSerializer | None,
+        http_protocol: HTTPProtocol,
+        websocket_protocol: WebsocketProtocol | None,
     ) -> None:
         self.app = app
         self._scope = None
@@ -53,11 +49,9 @@ class ASGIEventManager:
         self.expected_events = []
         self._is_keepalive = False
         self.event_bus = event_bus
-        self.http_parser = http_parser
-        self.http_serializer = http_serializer
+        self.http = http_protocol
+        self._websocket = websocket_protocol
         self.scope_builder = ASGIScopeBuilder()
-        self._websocket_parser = websocket_parser
-        self._websocket_serializer = websocket_serializer
 
     @property
     def scope(self) -> "Scope":
@@ -65,14 +59,9 @@ class ASGIEventManager:
         return self._scope
 
     @property
-    def websocket_parser(self) -> IWebsocketParser:
-        assert self._websocket_parser is not None
-        return self._websocket_parser
-
-    @property
-    def websocket_serializer(self) -> IWebsocketSerializer:
-        assert self._websocket_serializer is not None
-        return self._websocket_serializer
+    def websocket(self) -> WebsocketProtocol:
+        assert self._websocket is not None
+        return self._websocket
 
     async def launch_app(
         self, metadata: RequestMetadata | None, client: tuple[str, int] | None
@@ -85,10 +74,7 @@ class ASGIEventManager:
         if self.scope["type"] == "http":
             self.expected_events = ["http.response.start"]
         if self.scope["type"] == "websocket":
-            if (
-                self._websocket_serializer is None
-                or self._websocket_parser is None
-            ):
+            if self._websocket is None:
                 self.send_predefined_response(
                     RESPONSE_WEBSOCKETS_IS_NOT_SUPPORTED
                 )
@@ -108,9 +94,9 @@ class ASGIEventManager:
         return len(self.expected_events) == 0
 
     def send_predefined_response(self, response: PredefinedResponse) -> None:
-        data = self.http_serializer.serialize_metadata(
+        data = self.http.serializer.serialize_metadata(
             response.metadata
-        ) + self.http_serializer.serialize_body(response.body)
+        ) + self.http.serializer.serialize_body(response.body)
         self.log_response(response.metadata.status)
         self.event_bus.send(data)
 
@@ -127,27 +113,27 @@ class ASGIEventManager:
             return await self.receive_websocket()
 
     async def receive_http(self) -> "ASGIReceiveEvent":
-        data = self.http_parser.get_body()
+        data = self.http.parser.get_body()
         if data is None:
             if s_data := await self.event_bus.receive():
-                self.http_parser.feed_data(s_data)
-            data = self.http_parser.get_body()
+                self.http.parser.feed_data(s_data)
+            data = self.http.parser.get_body()
         if data is None:
             return {"type": "http.disconnect"}
         return {
             "type": "http.request",
             "body": data,
-            "more_body": self.http_parser.is_more_body(),
+            "more_body": self.http.parser.is_more_body(),
         }
 
     async def receive_websocket(self) -> "ASGIReceiveEvent":
         if "websocket.send" not in self.expected_events:
             return {"type": "websocket.connect"}
-        data = self.websocket_parser.get_data()
+        data = self.websocket.parser.get_data()
         if data is None:
             if s_data := await self.event_bus.receive():
-                self.websocket_parser.feed_data(s_data)
-            data = self.websocket_parser.get_data()
+                self.websocket.parser.feed_data(s_data)
+            data = self.websocket.parser.get_data()
         if isinstance(data, int):
             return {
                 "type": "websocket.disconnect",
@@ -187,7 +173,7 @@ class ASGIEventManager:
                 else:
                     self.expected_events = ["http.response.body"]
                     self.event_bus.send(
-                        self.http_serializer.serialize_metadata(
+                        self.http.serializer.serialize_metadata(
                             self.response_metadata
                         ),
                     )
@@ -198,14 +184,14 @@ class ASGIEventManager:
                 if event.get("more_trailers", False) is False:
                     self.expected_events = ["http.response.body"]
                     self.event_bus.send(
-                        self.http_serializer.serialize_metadata(
+                        self.http.serializer.serialize_metadata(
                             self.response_metadata
                         ),
                     )
             case "http.response.body":
                 event = cast("HTTPResponseBodyEvent", event)
                 self.event_bus.send(
-                    self.http_serializer.serialize_body(event["body"])
+                    self.http.serializer.serialize_body(event["body"])
                 )
                 if event.get("more_body", False) is False:
                     self.expected_events = []
@@ -227,7 +213,7 @@ class ASGIEventManager:
                     (b"upgrade", b"websocket"),
                     (
                         b"sec-websocket-accept",
-                        self.websocket_serializer.create_accept_token(
+                        self.websocket.serializer.create_accept_token(
                             client_token
                         ),
                     ),
@@ -236,7 +222,7 @@ class ASGIEventManager:
                     headers.append(
                         (b"sec-websocket-protocol", subprotocol.encode())
                     )
-                data = self.http_serializer.serialize_metadata(
+                data = self.http.serializer.serialize_metadata(
                     ResponseMetadata(
                         status=101,
                         headers=headers,
@@ -256,11 +242,11 @@ class ASGIEventManager:
                 else:
                     raise ValueError("bytes or text must be provided")
                 self.event_bus.send(
-                    self.websocket_serializer.serialize_data(ws_data)
+                    self.websocket.serializer.serialize_data(ws_data)
                 )
             case "websocket.close":
                 self.event_bus.send(
-                    self.websocket_serializer.build_close_frame()
+                    self.websocket.serializer.build_close_frame()
                 )
                 self.expected_events = []
             case _:
