@@ -21,6 +21,8 @@ class WSProtoWebsocketParser(IWebsocketParser):
         for event in self.parser.received_frames():
             if event.opcode in (self.Opcode.BINARY, self.Opcode.TEXT):
                 return event.payload  # type: ignore[no-any-return]
+            if event.opcode == self.Opcode.CLOSE:
+                return event.payload[0]  # type: ignore[no-any-return]
             raise ValueError(f"Unhandled event {event}")
         return None
 

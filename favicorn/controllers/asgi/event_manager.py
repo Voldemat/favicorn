@@ -249,6 +249,7 @@ class ASGIEventManager:
                     self.websocket.serializer.build_close_frame()
                 )
                 self.expected_events = []
+                self._is_keepalive = False
             case _:
                 raise ValueError(f"Unhandled event type {event['type']}")
 
