@@ -168,6 +168,7 @@ class ASGIEventManager:
                     status=event["status"],
                     headers=event["headers"],
                 )
+                self.log_response(event["status"])
                 if event.get("trailers", False) is True:
                     self.expected_events = ["http.response.trailers"]
                 else:
