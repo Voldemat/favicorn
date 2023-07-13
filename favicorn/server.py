@@ -3,10 +3,11 @@ import logging
 
 from .connection_manager import ConnectionManager
 from .i.connection import IConnectionFactory
+from .i.server import IServer
 from .i.socket_provider import ISocketProvider
 
 
-class Server:
+class Server(IServer):
     logger: logging.Logger
     socket_provider: ISocketProvider
     connection_factory: IConnectionFactory
