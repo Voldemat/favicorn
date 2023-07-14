@@ -5,6 +5,8 @@ name: Test & Lint & Publish
 
 on:
   push:
+    path_exclude:
+      - README.md
     branches: [ "main" ]
     tags: ["*"]
 
