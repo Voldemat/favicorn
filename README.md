@@ -1,6 +1,7 @@
 # Favicorn
 ![CI](https://github.com/Voldemat/favicorn/actions/workflows/python-package.yml/badge.svg)
 [![PyPI version](https://badge.fury.io/py/favicorn.svg)](https://badge.fury.io/py/favicorn)
+[![codecov](https://codecov.io/github/Voldemat/favicorn/branch/main/graph/badge.svg?token=7X60C005I2)](https://codecov.io/github/Voldemat/favicorn)
 
 
 ## Installation
