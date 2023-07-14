@@ -2,6 +2,8 @@
 ![CI](https://github.com/Voldemat/favicorn/actions/workflows/python-package.yml/badge.svg)
 [![PyPI version](https://badge.fury.io/py/favicorn.svg)](https://badge.fury.io/py/favicorn)
 [![codecov](https://codecov.io/github/Voldemat/favicorn/branch/main/graph/badge.svg?token=7X60C005I2)](https://codecov.io/github/Voldemat/favicorn)
+[![Maintainability](https://api.codeclimate.com/v1/badges/56b798d26921ebc22f08/maintainability)](https://codeclimate.com/github/Voldemat/favicorn/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/56b798d26921ebc22f08/test_coverage)](https://codeclimate.com/github/Voldemat/favicorn/test_coverage)
 
 
 ## Installation
