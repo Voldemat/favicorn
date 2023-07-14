@@ -35,6 +35,10 @@ jobs:
       uses: codecov/codecov-action@v3
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    - name: Upload coverage reports to CodeClimate
+      uses: paambaati/codeclimate-action@v5.0.0
+      env:
+        CC_TEST_REPORTER_ID: ${{secrets.CODE_CLIMATE_TOKEN}}
     - name: Install build tools
       if: ${{ github.ref_type == 'tag' }} 
       run: pip install build
