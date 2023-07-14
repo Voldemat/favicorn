@@ -1,4 +1,7 @@
 # Favicorn
+![CI](https://github.com/Voldemat/favicorn/actions/workflows/python-package.yml/badge.svg)
+[![PyPI version](https://badge.fury.io/py/favicorn.svg)](https://badge.fury.io/py/favicorn)
+
 
 ## Installation
 ```bash
