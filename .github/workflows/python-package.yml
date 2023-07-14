@@ -28,9 +28,9 @@ jobs:
         python -m pip install --upgrade pip pipenv
         python -m pipenv install --dev --system
     - name: Lint
-      run: black --check . && flake8 . && mypy .
+      run: black --check . && flake8 . && mypy --pretty  .
     - name: Test
-      run: coverage run -m pytest .
+      run: coverage run -m pytest --color=yes .
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
       env:
@@ -39,15 +39,26 @@ jobs:
       uses: paambaati/codeclimate-action@v5.0.0
       env:
         CC_TEST_REPORTER_ID: ${{secrets.CODE_CLIMATE_TOKEN}}
-    - name: Install build tools
-      if: ${{ github.ref_type == 'tag' }} 
-      run: pip install build
-    - name: Build package
-      if: ${{ github.ref_type == 'tag' }} 
-      run: python -m build
-    - name: Publish package
-      if: ${{ github.ref_type == 'tag' }} 
-      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10"]
+    needs: ['lintAndTest']
+    if: ${{ github.ref_type == 'tag' }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install build tools
+        run: pip install build
+      - name: Build package
+        run: python -m build
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
