@@ -5,3 +5,8 @@
 .coverage
 __pycache__
 check.py
+favicorn.egg-info
+build
+dist
+extension_build
+Makefile
