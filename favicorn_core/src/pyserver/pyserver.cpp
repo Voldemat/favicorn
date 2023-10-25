@@ -1,62 +1,5 @@
-#include <Python.h>
-#include <structmember.h>
-#include <new>
-#include <exception>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <iostream>
+#include "src/pyserver/pyserver.hpp"
 
-
-class Server {
-private:
-    sockaddr_in addr;
-    int server_id;
-    char buffer[1500];
-public:
-    Server(
-        const uint32_t host,
-        const uint16_t port
-    ) : addr{0}, server_id{0}, buffer{""} {
-        addr.sin_family = AF_INET;
-        addr.sin_addr.s_addr = htonl(host);
-        addr.sin_port = htons(port);
-    };
-    int start() {
-        server_id = socket(AF_INET, SOCK_STREAM, 0);
-        if (server_id < 0) { return -1; };
-        int bindStatus = bind(
-            server_id,
-            (struct sockaddr*) &addr, 
-            sizeof(addr)
-        );
-        if (bindStatus < 0) {
-            return -1;
-        };
-        listen(server_id, 5);
-        return 0;
-    };
-    void receive() const {
-        int client = accept(server_id, nullptr, 0);
-        if (client < 0) return;
-        recv(client, (char*) buffer, sizeof(buffer), 0);
-        const char* res = "HTTP/1.1 200 OK\r\nContent-Length:0\r\n\r\n";
-        send(client, res, strlen(res), 0);
-        close(client);
-    };
-    const char* get_buffer() const {
-        return buffer;
-    };
-    ~Server() const {
-        if (server_id <= 0) return;
-        close(server_id);
-    };
-
-};
-typedef struct {
-    PyObject_HEAD
-    Server*    m_myclass;
-} PyServer;
 
 int PyServer_init(
 	PyObject* self,
@@ -162,41 +105,4 @@ PyObject* PyServer_receive(PyObject *self, PyObject *args) {
     PyServer* _self = reinterpret_cast<PyServer*>(self);
     _self -> m_myclass -> receive();
     return PyUnicode_FromString(_self -> m_myclass -> get_buffer());
-};
-
-static PyMethodDef PyServer_methods[] = {
-    {
-        "start",
-        (PyCFunction)PyServer_start,
-        METH_NOARGS,
-        PyDoc_STR("Create socket and bind to specified address")
-    },
-    {
-        "receive",
-        (PyCFunction)PyServer_receive,
-        METH_NOARGS,
-        NULL
-    },
-    {NULL, NULL} /* Sentinel */
-};
-
-static struct PyMemberDef PyServer_members[] = {
-    {NULL} /* Sentinel */
-};
-
-static PyType_Slot PyServer_slots[] = {
-    {Py_tp_new, (void*)PyServer_new},
-    {Py_tp_init, (void*)PyServer_init},
-    {Py_tp_dealloc, (void*)PyServer_dealloc},
-    {Py_tp_members,  PyServer_members},
-    {Py_tp_methods, PyServer_methods},
-    {0, 0}
-};
-
-static PyType_Spec server_spec = {
-    "Server",                                  // name
-    sizeof(PyServer) + sizeof(Server),    // basicsize
-    0,                                          // itemsize
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,   // flags
-    PyServer_slots                               // slots
 };

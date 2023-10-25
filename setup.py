@@ -1,18 +1,27 @@
 import os
-from distutils.core import Extension
+import glob
 from pathlib import Path
 
-from setuptools import find_packages, setup  # type: ignore [import]
+from setuptools import find_packages, setup, Extension  # type: ignore [import]
 
+sources = [
+    *glob.glob("**/*.c", recursive=True),
+    *glob.glob("**/*.cpp", recursive=True),
+]
+header_files = [
+    *glob.glob("**/*.h", recursive=True),
+    *glob.glob("**/*.hpp", recursive=True),
+]
 proxylib_module = Extension(
     "favicorn_core",
-    sources=[
-        "favicorn/extension/core.cpp",
-    ],
+    sources=sources,
     language="c++",
     include_dirs=[
-        "/Users/vladimir/code/opensource/favicorn/favicorn/extension/"
+        'favicorn_core',
+        'favicorn_core/include'
     ],
+    depends=[*sources, *header_files],
+    extra_compile_args=['-Wno-unreachable-code']
 )
 
 setup(
