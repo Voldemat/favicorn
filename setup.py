@@ -1,8 +1,8 @@
-import os
 import glob
+import os
 from pathlib import Path
 
-from setuptools import find_packages, setup, Extension  # type: ignore [import]
+from setuptools import Extension, find_packages, setup  # type: ignore [import]
 
 sources = [
     *glob.glob("**/*.c", recursive=True),
@@ -16,12 +16,9 @@ proxylib_module = Extension(
     "favicorn_core",
     sources=sources,
     language="c++",
-    include_dirs=[
-        'favicorn_core',
-        'favicorn_core/include'
-    ],
+    include_dirs=["favicorn_core", "favicorn_core/include"],
     depends=[*sources, *header_files],
-    extra_compile_args=['-Wno-unreachable-code']
+    extra_compile_args=["-Wno-unreachable-code"],
 )
 
 setup(
