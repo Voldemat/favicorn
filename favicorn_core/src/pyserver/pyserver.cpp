@@ -130,6 +130,6 @@ PyObject* PyServer_receive(PyObject *self, PyObject *args) {
     PyDict_SetItemString(scope, "method", PyUnicode_FromString(request -> method));
     PyDict_SetItemString(scope, "scheme", PyUnicode_FromString("http"));
     PyDict_SetItemString(scope, "headers", headers);
-
+    delete request;
     return scope;
 };

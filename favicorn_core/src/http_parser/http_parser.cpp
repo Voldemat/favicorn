@@ -49,13 +49,19 @@ std::tuple<HTTPRequest*, const char*>HTTPParser::parse_request(
 	const char* buffer,
 	size_t length
 ) {
+	if (length == 0) {
+		char* error_msg = new char[40];
+		error_msg = "Length is zero";
+		return {nullptr, error_msg};
+	};
 	HTTPRequest* request = new HTTPRequest();
     settings.request = request;
-    enum llhttp_errno err = llhttp_execute(&parser, buffer, strlen(buffer));
+    enum llhttp_errno err = llhttp_execute(&parser, buffer, length);
+    llhttp_reset(&parser);
     if (err == HPE_OK) {
-        return {request, NULL};
+        return {request, nullptr};
     } else {
-    	char error_msg[200];
+    	char* error_msg = new char[200];
     	snprintf(
     		error_msg,
     		sizeof(error_msg),
@@ -63,7 +69,7 @@ std::tuple<HTTPRequest*, const char*>HTTPParser::parse_request(
     		llhttp_errno_name(err),
     		parser.reason
     	);
-    	return {NULL, error_msg};
+    	return {nullptr, error_msg};
     }
 };
 

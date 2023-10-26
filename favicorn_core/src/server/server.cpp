@@ -31,8 +31,8 @@ const HTTPRequest* Server::receive() {
     int client = accept(server_id, nullptr, 0);
     if (client < 0) return NULL;
     recv(client, (char*) buffer, sizeof(buffer), 0);
-    const HTTPRequest* request;
-    const char* error_msg;
+    HTTPRequest* request = nullptr;
+    const char* error_msg = nullptr;
     std::tie(request, error_msg) = parser.parse_request(
         buffer,
         strlen(buffer)
@@ -43,6 +43,7 @@ const HTTPRequest* Server::receive() {
     const char* res = "HTTP/1.1 200 OK\r\nContent-Length:0\r\n\r\n";
     send(client, res, strlen(res), 0);
     close(client);
+    memset((void*)buffer, 0, sizeof(buffer));
     return request;
 };
 Server::~Server() {
