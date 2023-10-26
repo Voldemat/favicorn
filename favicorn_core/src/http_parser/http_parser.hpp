@@ -19,9 +19,15 @@ struct parse_settings_t : llhttp_settings_t {
 	HTTPRequest* request;
 	char* current_header_key;
 };
+class HTTPParser {
+	llhttp_t parser;
+	parse_settings_t settings;
+public:
+	HTTPParser();
+	std::tuple<HTTPRequest*, const char*> parse_request(
+		const char* buffer,
+		size_t length
+	);
 
-std::tuple<HTTPRequest*, const char*> parse_request(
-	const char* buffer,
-	size_t length
-);
+};
 #endif

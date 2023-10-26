@@ -2,18 +2,18 @@
 #define INCLUDE_SERVER_H_
 
 #include <netinet/in.h>
-
+#include "src/http_parser/http_parser.hpp"
 
 class Server {
 private:
     sockaddr_in addr;
     int server_id;
-    char buffer[1500];
+    const char buffer[1500];
+    HTTPParser parser;
 public:
     Server(const uint32_t host, const uint16_t port);
     int start();
-    void receive() const;
-    const char* get_buffer() const;
+    const HTTPRequest* receive();
     ~Server();
 };
 
