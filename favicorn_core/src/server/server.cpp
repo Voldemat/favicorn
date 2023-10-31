@@ -1,8 +1,5 @@
-#include <unistd.h>
-#include <iostream>
-#include <llhttp.h>
-
 #include "src/server/server.hpp"
+#include <unistd.h>
 
 
 Server::Server(
@@ -27,9 +24,9 @@ int Server::start() {
     listen(server_id, 5);
     return 0;
 };
-const HTTPRequest* Server::receive() {
+const std::tuple<HTTPRequest*, unsigned short> Server::receive() {
     int client = accept(server_id, nullptr, 0);
-    if (client < 0) return NULL;
+    if (client < 0) return {NULL, 0};
     recv(client, (char*) buffer, sizeof(buffer), 0);
     HTTPRequest* request = nullptr;
     const char* error_msg = nullptr;
@@ -38,13 +35,10 @@ const HTTPRequest* Server::receive() {
         strlen(buffer)
     );
     if (request == NULL) {
-        std::cout << error_msg << std::endl;
+        printf("Request is NULL, error: %s\n", error_msg);
     }
-    const char* res = "HTTP/1.1 200 OK\r\nContent-Length:0\r\n\r\n";
-    send(client, res, strlen(res), 0);
-    close(client);
     memset((void*)buffer, 0, sizeof(buffer));
-    return request;
+    return {request, (unsigned short) client};
 };
 Server::~Server() {
     if (server_id <= 0) return;

@@ -1,9 +1,12 @@
 #include "src/http_parser/http_parser.hpp"
 
+	
+HTTPRequest::HTTPRequest() : headers{} {};
+
 int on_url(llhttp_t* parser, const char* buffer, size_t length) {
 	HTTPRequest* request = ((parse_settings_t*) (parser -> settings)) -> request;
-	request -> url = new char[length + 1];
-	memcpy((void*)request -> url, buffer, length);
+	request -> url = std::make_unique<char[]>(length + 1);
+	memcpy((void*)request -> url.get(), buffer, length);
 	return 0;
 };
 

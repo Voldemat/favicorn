@@ -1,33 +1,36 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include "src/pyserver/pyserver.hpp"
-
-
-static PyMethodDef ExtensionMethods[] = {
-    {NULL, NULL, 0, NULL}
-};
-static struct PyModuleDef core_module = {
-    PyModuleDef_HEAD_INIT,
-    "favicorn_core",
-    NULL,
-    -1,
-    NULL
-};
+#include "src/pyasgi/pyasgi.hpp"
+#include "src/scope.hpp"
+#include "src/module.hpp"
 
 
 PyMODINIT_FUNC PyInit_favicorn_core() {
-    PyObject* module = PyModule_Create(&core_module);
+    PyObject* module = PyModule_Create(&extension::core_module);
 
-    PyObject *myclass = PyType_FromSpec(&server_spec);
-    if (myclass == NULL){
+    PyObject *server_class = PyType_FromSpec(&server_spec);
+    if (server_class == NULL){
         return NULL;
     };
-    Py_INCREF(myclass);
+    Py_INCREF(server_class);
 
-    if(PyModule_AddObject(module, "Server", myclass) < 0){
-        Py_DECREF(myclass);
+    if(PyModule_AddObject(module, "Server", server_class) < 0){
+        Py_DECREF(server_class);
         Py_DECREF(module);
         return NULL;
     };
+    PyObject *asgi_class = PyType_FromSpec(&pyasgi_spec);
+    if (asgi_class == NULL){
+        return NULL;
+    };
+    Py_INCREF(asgi_class);
+
+    if(PyModule_AddObject(module, "ASGIManager", asgi_class) < 0){
+        Py_DECREF(asgi_class);
+        Py_DECREF(module);
+        return NULL;
+    };
+    PyModule_AddStringConstant(module, SCOPE_TYPE, "type");
     return module;
 };

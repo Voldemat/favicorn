@@ -1,6 +1,9 @@
 #include "src/pyserver/pyserver.hpp"
+#include "src/module.hpp"
 #include <vector>
 
+
+static PyObject* scope_type = NULL;
 
 int PyServer_init(
 	PyObject* self,
@@ -105,31 +108,21 @@ PyObject* PyServer_receive(PyObject *self, PyObject *args) {
     assert(self);
 
     PyServer* _self = reinterpret_cast<PyServer*>(self);
-    const HTTPRequest* request = _self -> m_myclass -> receive();
+    HTTPRequest* request = NULL;
+    unsigned short socketId;
+    std::tie(request, socketId) = _self -> m_myclass -> receive();
     if (request == NULL) {
         Py_INCREF(Py_None);
         return Py_None;
     }
-    PyObject* scope = PyDict_New();
-    PyObject* scope_asgi = PyDict_New();
-    std::vector<PyObject*> headers_tuples;
-    for (const std::pair<const char*, const char*> item : request -> headers) {
-        PyObject* key = PyUnicode_FromString(item.first);
-        PyObject* value = PyUnicode_FromString(item.second);
-        PyObject* tuple = PyTuple_Pack(2, key, value);
-        headers_tuples.push_back(tuple);
-    };
-    PyObject* headers = PyTuple_New(headers_tuples.size());
-    for (int index = 0; index < headers_tuples.size(); ++index){
-        PyTuple_SetItem(headers, index, headers_tuples[index]);
-    };
-    PyDict_SetItemString(scope_asgi, "version", PyUnicode_FromString("3.0"));
-    PyDict_SetItemString(scope_asgi, "spec_version", PyUnicode_FromString("2.3"));
-    PyDict_SetItemString(scope, "path", PyUnicode_FromString(request -> url));
-    PyDict_SetItemString(scope, "type", PyUnicode_FromString("http"));
-    PyDict_SetItemString(scope, "method", PyUnicode_FromString(request -> method));
-    PyDict_SetItemString(scope, "scheme", PyUnicode_FromString("http"));
-    PyDict_SetItemString(scope, "headers", headers);
+    PyObject* module = PyState_FindModule(&extension::core_module);
+    PyObject* manager_class = PyObject_GetAttrString(module, "ASGIManager");
+    PyObject* asgi_manager = PyObject_CallFunction(
+        manager_class,
+        "HO",
+        socketId,
+        PyCapsule_New((void*)request, NULL, NULL)
+    );
     delete request;
-    return scope;
+    return asgi_manager;
 };

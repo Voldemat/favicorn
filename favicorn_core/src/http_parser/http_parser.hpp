@@ -7,12 +7,12 @@
 
 
 struct HTTPRequest {
-	char* url;
+	std::unique_ptr<char[]> url;
 	char method[6] = "\n";
 	char http_version[4] = "\n";
 	std::unordered_map<const char*, const char*> headers;
 
-	HTTPRequest(): headers{} {};
+	HTTPRequest();
 };
 
 struct parse_settings_t : llhttp_settings_t {

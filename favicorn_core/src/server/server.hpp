@@ -2,6 +2,7 @@
 #define INCLUDE_SERVER_H_
 
 #include <netinet/in.h>
+#include <tuple>
 #include "src/http_parser/http_parser.hpp"
 
 class Server {
@@ -13,7 +14,7 @@ private:
 public:
     Server(const uint32_t host, const uint16_t port);
     int start();
-    const HTTPRequest* receive();
+    const std::tuple<HTTPRequest*, unsigned short> receive();
     ~Server();
 };
 
