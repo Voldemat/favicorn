@@ -20,6 +20,9 @@ httptools = "*"
 h11 = "*"
 wsproto = "*"
 coverage = "*"
+build = "*"
+pybind11 = "*"
+cmake-build-extension = "*"
 
 [requires]
 python_version = "3.10"

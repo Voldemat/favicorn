@@ -17,3 +17,12 @@ ignore_missing_imports=true
 [[tool.mypy.overrides]]
 module="cmake_build_extension"
 ignore_missing_imports=true
+
+[build-system]
+requires = [
+  "setuptools >= 40.9.0",
+  "wheel",
+  "cmake_build_extension",
+  "pybind11"
+]
+build-backend = "setuptools.build_meta"

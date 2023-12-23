@@ -32,6 +32,5 @@ setup(
     ext_modules=[favicorn_core],
     long_description=(Path(__file__).parent / "README.md").read_text(),
     long_description_content_type="text/markdown",
-    install_requires=["pybind11", "cmake_build_extension"],
     cmdclass={"build_ext": cmake_build_extension.BuildExtension},
 )
