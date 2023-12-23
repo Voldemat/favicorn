@@ -93,7 +93,7 @@ install(FILES
 # Find Python3 and NumPy
 set(CMAKE_FIND_DEBUG_MODE 1)
 cmake_print_variables(Python3_SITEARCH)
-find_package(pybind11 REQUIRED PATHS ${Python3_SITEARCH})
+find_package(pybind11 REQUIRED PATHS ${Python3_SITEARCH} NO_DEFAULT_PATH)
 
 pybind11_add_module(pybind11_bindings MODULE favicorn_core/core.cpp)
 target_link_libraries(pybind11_bindings

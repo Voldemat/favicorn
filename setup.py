@@ -14,9 +14,7 @@ favicorn_core = cmake_build_extension.CMakeExtension(
     cmake_configure_options=[
         f"-DPython3_ROOT_DIR={Path(sys.prefix)}",
         "-DCALL_FROM_SETUP_PY:BOOL=ON",
-        "-DBUILD_SHARED_LIBS:BOOL=OFF",
-        "-DEXAMPLE_WITH_SWIG:BOOL=OFF",
-        "-DEXAMPLE_WITH_PYBIND11:BOOL=ON",
+        "-DBUILD_SHARED_LIBS:BOOL=OFF"
     ],
 )
 
