@@ -14,6 +14,7 @@ include(GNUInstallDirs)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+find_package(pybind11 REQUIRED PATHS ${Python3_SITEARCH} NO_DEFAULT_PATH)
 file(GLOB_RECURSE FAVICORN_CORE_HEADERS favicorn_core *.hpp *.h)
 file(GLOB_RECURSE FAVICORN_CORE_SOURCES favicorn_core *.cpp *.c)
 add_library(
@@ -32,10 +33,12 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/favicorn_core/
     ${CMAKE_CURRENT_SOURCE_DIR}/favicorn_core/include/
 )
+cmake_print_variables(pybind11_INCLUDE_DIRS)
 target_include_directories(favicorn_core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/favicorn_core/>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE ${Python3_INCLUDE_DIRS}
+    PRIVATE ${pybind11_INCLUDE_DIRS}
 )
 install(
     TARGETS favicorn_core 
@@ -93,7 +96,6 @@ install(FILES
 # Find Python3 and NumPy
 set(CMAKE_FIND_DEBUG_MODE 1)
 set(VERBOSE 1)
-find_package(pybind11 REQUIRED PATHS ${Python3_SITEARCH} NO_DEFAULT_PATH)
 cmake_print_variables(pybind11_DIR)
 
 pybind11_add_module(pybind11_bindings MODULE favicorn_core/core.cpp)
