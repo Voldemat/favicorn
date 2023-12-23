@@ -1,6 +1,7 @@
 .mypy_cache
 .pytest_cache
 .env
+.cache
 .swp
 .coverage
 __pycache__

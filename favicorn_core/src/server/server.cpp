@@ -3,8 +3,8 @@
 
 
 Server::Server(
-    const uint32_t host,
-    const uint16_t port
+    const uint32_t& host,
+    const uint16_t& port
 ) : addr{0}, server_id{0}, buffer{""}, parser{} {
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(host);

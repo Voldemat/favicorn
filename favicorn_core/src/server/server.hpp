@@ -12,7 +12,7 @@ private:
     const char buffer[1500];
     HTTPParser parser;
 public:
-    Server(const uint32_t host, const uint16_t port);
+    Server(const uint32_t& host, const uint16_t& port);
     int start();
     const std::tuple<HTTPRequest*, unsigned short> receive();
     ~Server();
