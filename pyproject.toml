@@ -8,7 +8,12 @@ log_cli_level = "DEBUG"
 
 [tool.mypy]
 strict=true
+exclude = [ 'build' ]
 
 [[tool.mypy.overrides]]
 module='httptools.*'
+ignore_missing_imports=true
+
+[[tool.mypy.overrides]]
+module="cmake_build_extension"
 ignore_missing_imports=true
