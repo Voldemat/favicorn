@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.18.2)
+SET (CMAKE_C_COMPILER             "/usr/bin/clang")
+SET (CMAKE_CXX_COMPILER             "/usr/bin/clang++")
 project(favicorn_core VERSION 1.0)
 include(CMakePrintHelpers)
 
