@@ -22,7 +22,7 @@ favicorn_core = cmake_build_extension.CMakeExtension(
 
 setup(
     name="favicorn",
-    version=os.environ["GITHUB_REF_NAME"],
+    version=os.environ["PACKAGE_VERSION"],
     description="ASGI webserver",
     author="Vladimir Vojtenko",
     author_email="vladimirdev635@gmail.com",
