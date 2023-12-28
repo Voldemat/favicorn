@@ -4,6 +4,7 @@
 #include <map>
 #include <tuple>
 #include <unordered_map>
+#include <memory>
 #include "llhttp.h"
 
 

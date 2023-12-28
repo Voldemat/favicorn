@@ -4,7 +4,7 @@ from pathlib import Path
 
 import cmake_build_extension
 
-from setuptools import find_packages, setup  # type: ignore [import]
+from setuptools import find_packages, setup  # type: ignore
 
 
 favicorn_core = cmake_build_extension.CMakeExtension(
@@ -14,7 +14,7 @@ favicorn_core = cmake_build_extension.CMakeExtension(
     cmake_configure_options=[
         f"-DPython3_ROOT_DIR={Path(sys.prefix)}",
         "-DCALL_FROM_SETUP_PY:BOOL=ON",
-        "-DBUILD_SHARED_LIBS:BOOL=OFF"
+        "-DBUILD_SHARED_LIBS:BOOL=OFF",
     ],
 )
 

@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "src/http_parser/http_parser.hpp"
 
 	

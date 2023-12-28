@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.18.2)
-SET (CMAKE_C_COMPILER             "/usr/bin/clang")
-SET (CMAKE_CXX_COMPILER             "/usr/bin/clang++")
 project(favicorn_core VERSION 1.0)
 include(CMakePrintHelpers)
+include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_EXTENSIONS OFF)
@@ -10,11 +9,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-include(GNUInstallDirs)
-
 # Use -fPIC even if statically compiled
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 REQUIRED PATHS ${Python3_SITEARCH} NO_DEFAULT_PATH)
 file(GLOB_RECURSE FAVICORN_CORE_HEADERS favicorn_core *.hpp *.h)
@@ -35,7 +31,6 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/favicorn_core/
     ${CMAKE_CURRENT_SOURCE_DIR}/favicorn_core/include/
 )
-cmake_print_variables(pybind11_INCLUDE_DIRS)
 target_include_directories(favicorn_core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/favicorn_core/>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -96,10 +91,6 @@ install(FILES
 # ===============
 
 # Find Python3 and NumPy
-set(CMAKE_FIND_DEBUG_MODE 1)
-set(VERBOSE 1)
-cmake_print_variables(pybind11_DIR)
-
 pybind11_add_module(pybind11_bindings MODULE favicorn_core/core.cpp)
 target_link_libraries(pybind11_bindings
     PRIVATE favicorn_core::favicorn_core)

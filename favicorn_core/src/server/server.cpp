@@ -1,5 +1,6 @@
 #include "src/server/server.hpp"
 #include <unistd.h>
+#include <stdio.h>
 
 
 Server::Server(

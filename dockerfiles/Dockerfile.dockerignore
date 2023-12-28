@@ -1,0 +1,11 @@
+*
+!favicorn
+!favicorn_core
+!.flake8
+!CMakeLists.txt
+!Pipfile*
+!pyproject.toml
+!README.md
+!setup.py
+!check.cpp
+!check.hpp
