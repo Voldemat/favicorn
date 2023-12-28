@@ -23,13 +23,16 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Set up Clang
+      uses: egor-tensin/setup-clang@v1
+      with:
+        version: 16
     - name: Install dependencies
       env:
         PACKAGE_VERSION: '1'
       run: |
         python3 -m pip install --upgrade pip pipenv
         python3 -m pipenv install --dev --system
-        apt install clang
         python3 setup.py install
     - name: Lint
       run: black --check . && flake8 . && mypy --pretty  .
