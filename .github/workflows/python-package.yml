@@ -29,6 +29,7 @@ jobs:
       run: |
         python3 -m pip install --upgrade pip pipenv
         python3 -m pipenv install --dev --system
+        apt install clang
         python3 setup.py install
     - name: Lint
       run: black --check . && flake8 . && mypy --pretty  .
