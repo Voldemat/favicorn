@@ -3,16 +3,21 @@ project(favicorn_core VERSION 1.0)
 include(CMakePrintHelpers)
 include(GNUInstallDirs)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+add_compile_options(-fsanitize=address)
 
 # Use -fPIC even if statically compiled
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 REQUIRED PATHS ${Python3_SITEARCH} NO_DEFAULT_PATH)
+find_package(Threads REQUIRED)
+find_package(LIBUV REQUIRED)
 file(GLOB_RECURSE FAVICORN_CORE_HEADERS favicorn_core *.hpp *.h)
 file(GLOB_RECURSE FAVICORN_CORE_SOURCES favicorn_core *.cpp *.c)
 add_library(
@@ -36,6 +41,7 @@ target_include_directories(favicorn_core PUBLIC
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE ${Python3_INCLUDE_DIRS}
     PRIVATE ${pybind11_INCLUDE_DIRS}
+    PRIVATE ${LIBUV_INCLUDE_DIRS}
 )
 install(
     TARGETS favicorn_core 
@@ -45,6 +51,11 @@ install(
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
+target_link_libraries(
+    favicorn_core
+    PRIVATE Threads::Threads
+    PRIVATE ${LIBUV_LIBRARIES}
+)
 install(
     EXPORT favicorn_coreTargets
     FILE favicorn_coreTargets.cmake

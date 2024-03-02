@@ -1,0 +1,8 @@
+/Users/vladimir/code/opensource/favicorn/cmake/CMakeFiles/favicorn_core.dir
+/Users/vladimir/code/opensource/favicorn/cmake/CMakeFiles/pybind11_bindings.dir
+/Users/vladimir/code/opensource/favicorn/cmake/CMakeFiles/edit_cache.dir
+/Users/vladimir/code/opensource/favicorn/cmake/CMakeFiles/rebuild_cache.dir
+/Users/vladimir/code/opensource/favicorn/cmake/CMakeFiles/list_install_components.dir
+/Users/vladimir/code/opensource/favicorn/cmake/CMakeFiles/install.dir
+/Users/vladimir/code/opensource/favicorn/cmake/CMakeFiles/install/local.dir
+/Users/vladimir/code/opensource/favicorn/cmake/CMakeFiles/install/strip.dir
